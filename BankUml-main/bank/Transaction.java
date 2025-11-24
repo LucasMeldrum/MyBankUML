@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class Transaction {
-
+   // private final TransactionsDatabaseManager txDB = TransactionsDatabaseManager.getInstance();
     private int transactionId;
     private double amount;
     private LocalDateTime timestamp;
@@ -33,8 +33,7 @@ public class Transaction {
     }
 
     public boolean validate(LoginManager loginManager) {
-        // Ensure active session
-        loginManager.manageSession();
+
 
         // Validate amount
         if (amount <= 0) {
@@ -63,6 +62,7 @@ public class Transaction {
                     if (!targetAccount.getStatus().equals("FROZEN")) {
                         targetAccount.updateBalance(amount);
                         targetAccount.addTransaction(this);
+                        TransactionsDatabaseManager.getInstance().saveTransaction(this);
                     }
                     else {
                         status = "failed due to FROZEN account or other issue";
@@ -75,6 +75,7 @@ public class Transaction {
                     if (!sourceAccount.getStatus().equals("FROZEN")) {
                         sourceAccount.updateBalance(-amount);
                         sourceAccount.addTransaction(this);
+                        TransactionsDatabaseManager.getInstance().saveTransaction(this);
                         }
                     else {
                         status = "failed due to FROZEN account or other issue";
@@ -88,6 +89,7 @@ public class Transaction {
                     if (!sourceAccount.getStatus().equals("FROZEN") && (!targetAccount.getStatus().equals("FROZEN"))) {
                         sourceAccount.updateBalance(-amount);
                         targetAccount.updateBalance(amount);
+                        TransactionsDatabaseManager.getInstance().saveTransaction(this);
                         targetAccount.addTransaction(this);
                         sourceAccount.addTransaction(this);
                     }

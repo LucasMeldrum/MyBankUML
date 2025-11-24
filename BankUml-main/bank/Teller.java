@@ -1,18 +1,26 @@
 package bank;
 
+import lombok.Getter;
+
 import java.util.List;
 import java.util.ArrayList;
 
 public class Teller {
+
+    @Getter
     private String employeeId;
+    @Getter
     private String name;
+    @Getter
     private String email;
+    @Getter
+    private String password;
     private boolean isAuthenticated;
 
     private LoginManager loginManager;
     private DatabaseManager databaseManager;
 
-    public Teller(String employeeId, String name, String email) {
+    public Teller(String employeeId, String name, String email, String password) {
         this.employeeId = employeeId;
         this.name = name;
         this.email = email;
@@ -22,35 +30,18 @@ public class Teller {
         this.databaseManager = DatabaseManager.getInstance();
     }
 
-    // AUTHENTICATION
-    public boolean login(String username, String password) {
+    // ================= AUTH =================
+    //not used anywhere
+    /*public boolean login(String username, String password) {
         boolean ok = loginManager.login(username, password);
-        if (ok) {
-            isAuthenticated = true;
-        }
+        if (ok) isAuthenticated = true;
         return ok;
     }
-
+    */
     private void checkSession() {
-        loginManager.manageSession();
-        if (!loginManagerSessionActive()) {
-            isAuthenticated = false;
-            throw new SecurityException("Session expired. Login required.");
-        }
-    }
-
-    private boolean loginManagerSessionActive() {
-        try {
-            loginManager.manageSession();
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    private void touchSession() {
-        if (isAuthenticated) {
-            loginManager.startSession();
+        loginManager.checkSession();
+        if (!isAuthenticated) {
+            throw new SecurityException("Session expired. Please log in again.");
         }
     }
 
@@ -58,29 +49,26 @@ public class Teller {
         if (!isAuthenticated)
             throw new SecurityException("Not authenticated.");
         checkSession();
-        touchSession();
     }
 
-    // SEARCH METHODS
+    public void logout() {
+        isAuthenticated = false;
+        loginManager.logout();
+    }
+
+    public boolean isAuthenticated() { return isAuthenticated; }
+
+    // ================= SEARCH =================
+
     private Account searchById(String id) {
-        return databaseManager.getAccountNumber(id);
+        return databaseManager.getAccountByNumber(id);
     }
 
     private List<Account> searchByName(String name) {
         List<Account> results = new ArrayList<>();
-        for (Account acc : databaseManager.retrieveAllAccounts()) {
-            if (acc.getOwner().getName().equalsIgnoreCase(name)) {
-                results.add(acc);
-            }
-        }
-        return results;
-    }
 
-    private List<Account> searchByDateOfBirth(String dob) {
-        List<Account> results = new ArrayList<>();
         for (Account acc : databaseManager.retrieveAllAccounts()) {
-            String accountDob = acc.getCustomer().getDateOfBirth();
-            if (accountDob != null && accountDob.equals(dob)) {
+            if (acc.getCustomer().getName().equalsIgnoreCase(name)) {
                 results.add(acc);
             }
         }
@@ -90,107 +78,88 @@ public class Teller {
     public List<Account> searchAccounts(String query) {
         requireAuth();
 
-        List<Account> results = new ArrayList<>();
-
+        // Search by account ID
         Account byId = searchById(query);
-        if (byId != null) {
-            results.add(byId);
-            return results;
-        }
+        if (byId != null) return List.of(byId);
 
-        results = searchByName(query);
-        if (!results.isEmpty()) return results;
-
-        return searchByDateOfBirth(query);
+        // Search by customer name
+        List<Account> byName = searchByName(query);
+        return byName;
     }
 
-    public List<Account> searchAccountsByAttribute(String attribute, String value) {
+    // =============== TRANSACTIONS =================
+
+    public Transaction assistTransaction(Account account, String type, double amount) {
         requireAuth();
 
-        switch (attribute.toUpperCase()) {
-            case "ID":
-                Account acc = searchById(value);
-                return acc == null ? new ArrayList<>() : List.of(acc);
+        if (account == null) return null;
+        if (account.getStatus().equals("FROZEN")) return null;
 
-            case "NAME":
-                return searchByName(value);
+        Transaction tx = new Transaction(
+                (int)(Math.random() * 1_000_000),
+                amount,
+                type,
+                type.equalsIgnoreCase("withdraw") ? account : null,
+                type.equalsIgnoreCase("deposit") ? account : null
+        );
 
-            case "DOB":
-                return searchByDateOfBirth(value);
+        if (!tx.validate(loginManager)) return null;
 
-            default:
-                throw new IllegalArgumentException("Unknown search type: " + attribute);
-        }
+        tx.apply();
+        databaseManager.updateAccount(account);
+
+        return tx;
     }
 
-    // TRANSACTIONS
-    public Transaction assistTransaction(String accountId, String transactionType, double amount) {
+    public Transaction assistTransaction(String accountId, String type, double amount) {
+        requireAuth();
+        Account account = databaseManager.getAccountByNumber(accountId);
+        return assistTransaction(account, type, amount);
+    }
+
+    public Transaction assistTransfer(Account source, Account dest, double amount) {
         requireAuth();
 
-        Account account = databaseManager.getAccountNumber(accountId);
-        if (account == null || account.getStatus().equals("FROZEN"))
+        if (source == null || dest == null) return null;
+        if (source.getStatus().equals("FROZEN") || dest.getStatus().equals("FROZEN"))
             return null;
 
         Transaction tx = new Transaction(
-                (int)(Math.random() * 1000000),
+                (int)(Math.random() * 1_000_000),
                 amount,
-                transactionType,
-                transactionType.equalsIgnoreCase("withdraw") ? account : null,
-                transactionType.equalsIgnoreCase("deposit") ? account : null
+                "transfer",
+                source,
+                dest
         );
 
-        if (tx.validate(loginManager)) {
-            tx.apply();
-            databaseManager.updateAccount(account);
-            return tx;
-        }
+        if (!tx.validate(loginManager)) return null;
 
-        return null;
+        tx.apply();
+        databaseManager.updateAccount(source);
+        databaseManager.updateAccount(dest);
+
+        return tx;
     }
 
     public Transaction assistTransfer(String sourceId, String destId, double amount) {
         requireAuth();
-
-        Account src = databaseManager.getAccountNumber(sourceId);
-        Account dst = databaseManager.getAccountNumber(destId);
-
-        if (src == null || dst == null) return null;
-        if (src.getStatus().equals("FROZEN") || dst.getStatus().equals("FROZEN")) return null;
-
-        Transaction tx = new Transaction(
-                (int)(Math.random() * 1000000),
-                amount,
-                "transfer",
-                src,
-                dst
-        );
-
-        if (tx.validate(loginManager)) {
-            tx.apply();
-            databaseManager.updateAccount(src);
-            databaseManager.updateAccount(dst);
-            return tx;
-        }
-
-        return null;
+        Account src = databaseManager.getAccountByNumber(sourceId);
+        Account dst = databaseManager.getAccountByNumber(destId);
+        return assistTransfer(src, dst, amount);
     }
 
-    // ACCOUNT MANAGEMENT
+    // ================= ACCOUNT CONTROL =================
+
     public boolean unfreezeAccount(String accountId) {
         requireAuth();
 
-        Account account = databaseManager.getAccountNumber(accountId);
-        if (account == null || !account.getStatus().equals("FROZEN"))
-            return false;
+        Account acc = databaseManager.getAccountByNumber(accountId);
+        if (acc == null) return false;
+        if (!acc.getStatus().equals("FROZEN")) return false;
 
-        account.unfreezeAccount();
-        databaseManager.updateAccount(account);
+        acc.unfreezeAccount();
+        databaseManager.updateAccount(acc);
         return true;
-    }
-
-    public Account viewAccountDetails(String accountId) {
-        requireAuth();
-        return databaseManager.getAccountNumber(accountId);
     }
 
     public List<Account> getFrozenAccounts() {
@@ -198,20 +167,16 @@ public class Teller {
 
         List<Account> frozen = new ArrayList<>();
         for (Account acc : databaseManager.retrieveAllAccounts()) {
-            if (acc.getStatus().equals("FROZEN"))
+            if (acc.getStatus().equals("FROZEN")) {
                 frozen.add(acc);
+            }
         }
         return frozen;
     }
 
-    public void logout() {
-        isAuthenticated = false;
-        loginManager.logout();
+    public Account viewAccountDetails(String accountId) {
+        requireAuth();
+        return databaseManager.getAccountByNumber(accountId);
     }
 
-    // GETTERS
-    public String getEmployeeId() { return employeeId; }
-    public String getName() { return name; }
-    public String getEmail() { return email; }
-    public boolean isAuthenticated() { return isAuthenticated; }
 }

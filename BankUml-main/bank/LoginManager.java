@@ -1,96 +1,115 @@
 package bank;
 
+import lombok.Getter;
 
 public class LoginManager {
 
-    // Settings
-    private int sessionTimeoutMin = 20;
-    private int lockoutTimeMin = 2;   // lockout time in minutes
-    private int maxAttempts = 3;
+    // ================= SETTINGS ====================
+    private int sessionTimeoutMin = 20;   // session auto-logout time
+    private int lockoutTimeMin = 2;       // lockout duration
+    private int maxAttempts = 3;          // attempts before lockout
 
-    // State
+    // ================= STATE =======================
     private int loginAttempts = 0;
-    private long lockoutStartTime = 0;
     private boolean isLockedOut = false;
+    private long lockoutStartTime = 0;
 
-    private long sessionStartTime;
+    private long sessionStartTime = 0;
+    // ===========================================================
+    // GETTERS
+    // ===========================================================
+    @Getter
     private boolean sessionActive = false;
 
+
+    // Constructor
     public LoginManager(int sessionTimeoutMin) {
         this.sessionTimeoutMin = sessionTimeoutMin;
     }
 
-    // Placeholder authentication (replace with DB logic)
-    public boolean authenticate(String username, String password) {
-        return username.equals("admin") && password.equals("password123");
-    }
 
-    public boolean login(String username, String password) {
+    public boolean loginAttempt(boolean credentialsCorrect) {
 
-        // ========== 1. Check lockout status ==========
+        // ========= 1. Check lockout first =========
         if (isLockedOut) {
             long elapsedMin = (System.currentTimeMillis() - lockoutStartTime) / (1000 * 60);
 
             if (elapsedMin < lockoutTimeMin) {
-                System.out.println("You are locked out. Try again in " +
+                System.out.println(" Locked out. Try again in " +
                         (lockoutTimeMin - elapsedMin) + " minute(s).");
                 return false;
             } else {
-                // Lockout expired → reset state
+                // Lockout expired
                 isLockedOut = false;
                 loginAttempts = 0;
                 System.out.println("Lockout expired. You may try again.");
             }
         }
 
-        // ========== 2. Try authenticating ==========
-        if (authenticate(username, password)) {
-            loginAttempts = 0;  // reset attempts
-            startSession();
+        // ========= 2. If login is correct =========
+        if (credentialsCorrect) {
+            loginAttempts = 0;     // reset attempts
+            startSession();        // start session
             return true;
-        } else {
-            loginAttempts++;
-            System.out.println("Login failed. Attempts: " + loginAttempts);
-
-            // ========== 3. Trigger lockout ==========
-            if (loginAttempts >= maxAttempts) {
-                isLockedOut = true;
-                lockoutStartTime = System.currentTimeMillis();
-                System.out.println("Too many failed attempts. You are locked out for "
-                        + lockoutTimeMin + " minutes.");
-            }
-
-            return false;
         }
+
+        // ========= 3. If login failed =========
+        loginAttempts++;
+        System.out.println("Login failed. Attempt " + loginAttempts + "/" + maxAttempts);
+
+        if (loginAttempts >= maxAttempts) {
+            isLockedOut = true;
+            lockoutStartTime = System.currentTimeMillis();
+            System.out.println("🔒 Too many failed attempts. Locked out for " +
+                    lockoutTimeMin + " minutes.");
+        }
+
+        return false;
     }
 
+
+    // ===========================================================
+    // START SESSION
+    // ===========================================================
     public void startSession() {
-    	// to be called whener the user performs an action
         sessionStartTime = System.currentTimeMillis();
         sessionActive = true;
     }
 
-    public void logout() {
-        sessionActive = false;
-        //add ui logic
-        System.out.println("Logged out.");
-    }
-
-    public void manageSession() {
+    // ===========================================================
+    // CHECK & REFRESH SESSION (Called after each user action)
+    // ===========================================================
+    public boolean checkSession() {
         if (!sessionActive) {
             System.out.println("No active session.");
-            return;
+            return false;
         }
 
         long elapsedMinutes =
                 (System.currentTimeMillis() - sessionStartTime) / (1000 * 60);
 
         if (elapsedMinutes >= sessionTimeoutMin) {
-            System.out.println("Session expired. Logging out...");
+            System.out.println("⏳ Session expired.");
             logout();
-        } else {
-            System.out.println("Session active. Time left: "
-                    + (sessionTimeoutMin - elapsedMinutes) + " minutes.");
+            return false;
         }
+
+        return true;
+    }
+
+    public void refreshSession() {
+        sessionStartTime = System.currentTimeMillis();
+    }
+
+    // ===========================================================
+    // LOGOUT
+    // ===========================================================
+    public void logout() {
+        sessionActive = false;
+        System.out.println("Logged out.");
+    }
+
+    public boolean isLockedOut() {
+        return isLockedOut;
     }
 }
