@@ -26,9 +26,9 @@ public class Transaction {
         this.targetAccount = targetAccount;
     }
 
-    public boolean validate(SecurityManager securityManager) {
+    public boolean validate(LoginManager loginManager) {
 
-        boolean authorized = securityManager.authorize(
+        boolean authorized = loginManager.authorize(
                 "TransactionSystem",
                 "execute",
                 "transaction#" + transactionId
