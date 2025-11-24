@@ -10,6 +10,11 @@ public class Saving extends Account {
         super(customer, initialBalance);
     }
 
+    @Override
+    public String getAccountType() {
+        return "Savings";
+    }
+
     public void title() {
         System.out.println("**Payments**");
     }
@@ -32,8 +37,8 @@ public class Saving extends Account {
             return false;
         }
         balance += amount;
-        System.out.println("Deposited $" + amount + " to " + customer.getName() + "'s saving account");
-        System.out.println("New balance: $" + balance);
+        System.out.println("Deposited $" + String.format("%.2f", amount) + " to " + customer.getName() + "'s saving account");
+        System.out.println("New balance: $" + String.format("%.2f", balance));
 
         Transaction transaction = new Transaction(
                 generateTransactionId(),
@@ -52,8 +57,8 @@ public class Saving extends Account {
             return false;
         }
         balance -= amount;
-        System.out.println("Withdrawn $" + amount + " from " + customer.getName() + "'s saving account");
-        System.out.println("New balance: $" + balance);
+        System.out.println("Withdrawn $" + String.format("%.2f", amount) + " from " + customer.getName() + "'s saving account");
+        System.out.println("New balance: $" + String.format("%.2f", balance));
 
         Transaction transaction = new Transaction(
                 generateTransactionId(),
@@ -80,9 +85,9 @@ public class Saving extends Account {
         balance -= amount;
         recipient.updateBalance(amount);
 
-        System.out.println("Transferred $" + amount + " from " + customer.getName() +
+        System.out.println("Transferred $" + String.format("%.2f", amount) + " from " + customer.getName() +
                 " to " + recipient.getCustomer().getName());
-        System.out.println("Your new balance: $" + balance);
+        System.out.println("Your new balance: $" + String.format("%.2f", balance));
 
         recipient.getCustomer().printRecipientInfo();
 
@@ -105,14 +110,14 @@ public class Saving extends Account {
         }
         if (amount > balance) {
             System.out.println("Transaction failed: Insufficient funds");
-            System.out.println("Available balance: $" + balance + ", Requested: $" + amount);
+            System.out.println("Available balance: $" + String.format("%.2f", balance) + ", Requested: $" + String.format("%.2f", amount));
             return false;
         }
         return true;
     }
 
     public void printBalance() {
-        System.out.println(customer.getName() + "'s Saving Account Balance: $" + balance);
+        System.out.println(customer.getName() + "'s Saving Account Balance: $" + String.format("%.2f", balance));
     }
 
     private int generateTransactionId() {

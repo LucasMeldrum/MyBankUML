@@ -60,22 +60,47 @@ public class Transaction {
         switch (type.toLowerCase()) {
             case "deposit":
                 if (targetAccount != null) {
-                    targetAccount.updateBalance(amount);
+                    if (!targetAccount.getStatus().equals("FROZEN")) {
+                        targetAccount.updateBalance(amount);
+                        targetAccount.addTransaction(this);
+                    }
+                    else {
+                        status = "failed due to FROZEN account or other issue";
+                        return false;
+                    }
                 }
                 break;
             case "withdraw":
                 if (sourceAccount != null) {
-                    sourceAccount.updateBalance(-amount);
+                    if (!sourceAccount.getStatus().equals("FROZEN")) {
+                        sourceAccount.updateBalance(-amount);
+                        sourceAccount.addTransaction(this);
+                        }
+                    else {
+                        status = "failed due to FROZEN account or other issue";
+                        return false;
+                    }
+
                 }
                 break;
             case "transfer":
                 if (sourceAccount != null && targetAccount != null) {
-                    sourceAccount.updateBalance(-amount);
-                    targetAccount.updateBalance(amount);
+                    if (!sourceAccount.getStatus().equals("FROZEN") && (!targetAccount.getStatus().equals("FROZEN"))) {
+                        sourceAccount.updateBalance(-amount);
+                        targetAccount.updateBalance(amount);
+                        targetAccount.addTransaction(this);
+                        sourceAccount.addTransaction(this);
+                    }
+
+                    else {
+                        status = "failed due to FROZEN account or other issue";
+                        return false;
+                    }
+
                 }
                 break;
             default:
-                status = "failed";
+                status = "failed due to FROZEN account or other issue";
                 return false;
         }
 
@@ -88,11 +113,18 @@ public class Transaction {
     }
 
     public void receipt() {
-        System.out.println("Transaction receipt.");
+        System.out.println("━━━━━━━━━━━━━ TRANSACTION RECEIPT ━━━━━━━━━━━━━");
         System.out.println("Transaction ID: " + transactionId);
         System.out.println("Type: " + type);
-        System.out.println("Amount: $" + amount);
+        System.out.println("Amount: $" + String.format("%.2f", amount));
         System.out.println("Status: " + status);
         System.out.println("Timestamp: " + timestamp);
+        if (sourceAccount != null) {
+            System.out.println("From Account: " + sourceAccount.getAccountNumber());
+        }
+        if (targetAccount != null) {
+            System.out.println("To Account: " + targetAccount.getAccountNumber());
+        }
+        System.out.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     }
 }

@@ -10,6 +10,11 @@ public class Check extends Account {
         super(customer, initialBalance);
     }
 
+    @Override
+    public String getAccountType() {
+        return "Check";
+    }
+
     public void title() {
         System.out.println("**Check Title**");
     }

@@ -75,7 +75,7 @@ public class Customer {
         }
 
         if (!t.apply()) {
-            System.out.println("Deposit failed during apply().");
+            System.out.println("Deposit failed: " + t.getStatus());
             return false;
         }
 
@@ -98,7 +98,7 @@ public class Customer {
         }
 
         if (!t.apply()) {
-            System.out.println("Withdrawal failed during apply().");
+            System.out.println("Withdrawal failed: " + t.getStatus());
             return false;
         }
 
@@ -121,7 +121,7 @@ public class Customer {
         }
 
         if (!t.apply()) {
-            System.out.println("Transfer failed during apply().");
+            System.out.println("Transfer failed: " + t.getStatus());
             return false;
         }
 

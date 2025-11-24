@@ -11,6 +11,11 @@ public class Card extends Account {
     }
 
     @Override
+    public String getAccountType() {
+        return "Card";
+    }
+
+    @Override
     public void pay() {
         System.out.println("Card payment for: " + customer.getName());
     }
