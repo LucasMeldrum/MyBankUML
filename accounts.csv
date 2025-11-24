@@ -1,0 +1,4 @@
+accountId,name,dob,type,balance,status
+A101,John Doe,1998-04-12,CARD,600.00,ACTIVE
+A102,Alice Smith,2001-11-23,CHECK,1600.00,ACTIVE
+A103,Bob Johnson,1995-08-02,SAVING,3000.00,ACTIVE

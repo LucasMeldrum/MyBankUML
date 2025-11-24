@@ -16,6 +16,12 @@ public class Transaction {
     private Account sourceAccount;
     private Account targetAccount;
 
+    public Transaction() {
+        this.transactionId = (int) (Math.random() * 1000000);
+        this.timestamp = LocalDateTime.now();
+        this.status = "pending";
+    }
+
     public Transaction(int transactionId, double amount, String type, Account sourceAccount, Account targetAccount) {
         this.transactionId = transactionId;
         this.amount = amount;
@@ -27,24 +33,18 @@ public class Transaction {
     }
 
     public boolean validate(LoginManager loginManager) {
+        // Ensure active session
+        loginManager.manageSession();
 
-        boolean authorized = loginManager.authenticate(
-                "TransactionSystem",
-                "execute",
-                "transaction#" + transactionId
-        );
-
-        if (!authorized) {
-            status = "unauthorized";
-            return false;
-        }
-
+        // Validate amount
         if (amount <= 0) {
             status = "invalid amount";
             return false;
         }
 
-        if ((type.equals("withdraw") || type.equals("transfer")) && sourceAccount.getBalance() < amount) {
+        // Validate funds for withdraw / transfer
+        if ((type.equalsIgnoreCase("withdraw") || type.equalsIgnoreCase("transfer"))
+                && sourceAccount != null && sourceAccount.getBalance() < amount) {
             status = "insufficient funds";
             return false;
         }
@@ -57,16 +57,22 @@ public class Transaction {
         if (!status.equals("validated"))
             return false;
 
-        switch (type) {
+        switch (type.toLowerCase()) {
             case "deposit":
-                targetAccount.updateBalance(+amount);
+                if (targetAccount != null) {
+                    targetAccount.updateBalance(amount);
+                }
                 break;
             case "withdraw":
-                sourceAccount.updateBalance(-amount);
+                if (sourceAccount != null) {
+                    sourceAccount.updateBalance(-amount);
+                }
                 break;
             case "transfer":
-                sourceAccount.updateBalance(-amount);
-                targetAccount.updateBalance(+amount);
+                if (sourceAccount != null && targetAccount != null) {
+                    sourceAccount.updateBalance(-amount);
+                    targetAccount.updateBalance(amount);
+                }
                 break;
             default:
                 status = "failed";
@@ -83,5 +89,10 @@ public class Transaction {
 
     public void receipt() {
         System.out.println("Transaction receipt.");
+        System.out.println("Transaction ID: " + transactionId);
+        System.out.println("Type: " + type);
+        System.out.println("Amount: $" + amount);
+        System.out.println("Status: " + status);
+        System.out.println("Timestamp: " + timestamp);
     }
 }

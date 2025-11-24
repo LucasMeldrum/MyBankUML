@@ -2,8 +2,6 @@ package bank;
 
 import java.util.List;
 import java.util.ArrayList;
-import java.time.LocalDateTime;
-
 
 public class Teller {
     private String employeeId;
@@ -11,156 +9,207 @@ public class Teller {
     private String email;
     private boolean isAuthenticated;
 
-    private SearchEngine searchEngine;
-    private SecurityManager securityManager;
+    private LoginManager loginManager;
     private DatabaseManager databaseManager;
-    private AuditLogger auditLogger;
 
     public Teller(String employeeId, String name, String email) {
         this.employeeId = employeeId;
         this.name = name;
         this.email = email;
         this.isAuthenticated = false;
-        this.searchEngine = new SearchEngine();
-        this.securityManager = SecurityManager.getInstance();
+
+        this.loginManager = new LoginManager(20);
         this.databaseManager = DatabaseManager.getInstance();
-        this.auditLogger = AuditLogger.getInstance();
     }
 
-    public boolean authenticate(String credentials) {
-        boolean authorized = securityManager.authorize(employeeId, "TELLER");
-        if (authorized) {
-            this.isAuthenticated = true;
-            auditLogger.logTellerAction(employeeId, "LOGIN", null, LocalDateTime.now());
+    // AUTHENTICATION
+    public boolean login(String username, String password) {
+        boolean ok = loginManager.login(username, password);
+        if (ok) {
+            isAuthenticated = true;
         }
-        return authorized;
+        return ok;
     }
 
-    public List<AccountInfo> searchAccounts(String searchCriteria) {
-        if (!isAuthenticated) throw new SecurityException("Not authenticated");
-        if (!securityManager.verifyAuthorization(employeeId, "SEARCH_ACCOUNTS")) {
-            throw new SecurityException("Not authorized");
+    private void checkSession() {
+        loginManager.manageSession();
+        if (!loginManagerSessionActive()) {
+            isAuthenticated = false;
+            throw new SecurityException("Session expired. Login required.");
         }
+    }
 
-        List<AccountInfo> results = searchEngine.search(searchCriteria);
-        auditLogger.logTellerAction(employeeId, "SEARCH_ACCOUNTS", searchCriteria, LocalDateTime.now());
+    private boolean loginManagerSessionActive() {
+        try {
+            loginManager.manageSession();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void touchSession() {
+        if (isAuthenticated) {
+            loginManager.startSession();
+        }
+    }
+
+    private void requireAuth() {
+        if (!isAuthenticated)
+            throw new SecurityException("Not authenticated.");
+        checkSession();
+        touchSession();
+    }
+
+    // SEARCH METHODS
+    private Account searchById(String id) {
+        return databaseManager.getAccountNumber(id);
+    }
+
+    private List<Account> searchByName(String name) {
+        List<Account> results = new ArrayList<>();
+        for (Account acc : databaseManager.retrieveAllAccounts()) {
+            if (acc.getOwner().getName().equalsIgnoreCase(name)) {
+                results.add(acc);
+            }
+        }
         return results;
     }
 
-    public List<AccountInfo> searchAccountsByAttribute(String attribute, String value) {
-        if (!isAuthenticated) throw new SecurityException("Not authenticated");
-        if (!securityManager.verifyAuthorization(employeeId, "SEARCH_ACCOUNTS")) {
-            throw new SecurityException("Not authorized");
+    private List<Account> searchByDateOfBirth(String dob) {
+        List<Account> results = new ArrayList<>();
+        for (Account acc : databaseManager.retrieveAllAccounts()) {
+            String accountDob = acc.getCustomer().getDateOfBirth();
+            if (accountDob != null && accountDob.equals(dob)) {
+                results.add(acc);
+            }
+        }
+        return results;
+    }
+
+    public List<Account> searchAccounts(String query) {
+        requireAuth();
+
+        List<Account> results = new ArrayList<>();
+
+        Account byId = searchById(query);
+        if (byId != null) {
+            results.add(byId);
+            return results;
         }
 
-        List<AccountInfo> results = new ArrayList<>();
+        results = searchByName(query);
+        if (!results.isEmpty()) return results;
+
+        return searchByDateOfBirth(query);
+    }
+
+    public List<Account> searchAccountsByAttribute(String attribute, String value) {
+        requireAuth();
+
         switch (attribute.toUpperCase()) {
             case "ID":
-                AccountInfo account = searchEngine.searchByID(value);
-                if (account != null) results.add(account);
-                break;
+                Account acc = searchById(value);
+                return acc == null ? new ArrayList<>() : List.of(acc);
+
             case "NAME":
-                results = searchEngine.searchByName(value);
-                break;
+                return searchByName(value);
+
             case "DOB":
-                results = searchEngine.searchByDateOfBirth(value);
-                break;
+                return searchByDateOfBirth(value);
+
             default:
-                throw new IllegalArgumentException("Invalid attribute: " + attribute);
+                throw new IllegalArgumentException("Unknown search type: " + attribute);
         }
-
-        auditLogger.logTellerAction(employeeId, "SEARCH_BY_" + attribute, value, LocalDateTime.now());
-        return results;
     }
 
+    // TRANSACTIONS
     public Transaction assistTransaction(String accountId, String transactionType, double amount) {
-        if (!isAuthenticated) throw new SecurityException("Not authenticated");
-        if (!securityManager.verifyAuthorization(employeeId, "ASSIST_TRANSACTION")) {
-            throw new SecurityException("Not authorized");
-        }
+        requireAuth();
 
-        AccountInfo account = databaseManager.retrieveAccount(accountId);
-        if (account == null || account.getStatus().equals("FROZEN")) return null;
+        Account account = databaseManager.getAccountNumber(accountId);
+        if (account == null || account.getStatus().equals("FROZEN"))
+            return null;
 
-        Transaction transaction = new Transaction(accountId, transactionType, amount, employeeId);
-        if (transaction.validate()) {
-            transaction.apply(account);
+        Transaction tx = new Transaction(
+                (int)(Math.random() * 1000000),
+                amount,
+                transactionType,
+                transactionType.equalsIgnoreCase("withdraw") ? account : null,
+                transactionType.equalsIgnoreCase("deposit") ? account : null
+        );
+
+        if (tx.validate(loginManager)) {
+            tx.apply();
             databaseManager.updateAccount(account);
-            auditLogger.logTellerAction(employeeId, "ASSIST_TRANSACTION_SUCCESS", accountId, LocalDateTime.now());
-            return transaction;
+            return tx;
         }
+
         return null;
     }
 
-    public Transaction assistTransfer(String sourceAccountId, String destinationAccountId, double amount) {
-        if (!isAuthenticated) throw new SecurityException("Not authenticated");
-        if (!securityManager.verifyAuthorization(employeeId, "ASSIST_TRANSACTION")) {
-            throw new SecurityException("Not authorized");
+    public Transaction assistTransfer(String sourceId, String destId, double amount) {
+        requireAuth();
+
+        Account src = databaseManager.getAccountNumber(sourceId);
+        Account dst = databaseManager.getAccountNumber(destId);
+
+        if (src == null || dst == null) return null;
+        if (src.getStatus().equals("FROZEN") || dst.getStatus().equals("FROZEN")) return null;
+
+        Transaction tx = new Transaction(
+                (int)(Math.random() * 1000000),
+                amount,
+                "transfer",
+                src,
+                dst
+        );
+
+        if (tx.validate(loginManager)) {
+            tx.apply();
+            databaseManager.updateAccount(src);
+            databaseManager.updateAccount(dst);
+            return tx;
         }
 
-        AccountInfo sourceAccount = databaseManager.retrieveAccount(sourceAccountId);
-        AccountInfo destAccount = databaseManager.retrieveAccount(destinationAccountId);
-
-        if (sourceAccount == null || destAccount == null) return null;
-        if (sourceAccount.getStatus().equals("FROZEN") || destAccount.getStatus().equals("FROZEN")) return null;
-
-        Transaction transfer = new Transaction(sourceAccountId, "TRANSFER", amount, employeeId);
-        transfer.setDestinationAccount(destinationAccountId);
-
-        if (transfer.validate()) {
-            transfer.apply(sourceAccount);
-            destAccount.updateBalance(amount);
-            databaseManager.updateAccount(sourceAccount);
-            databaseManager.updateAccount(destAccount);
-            auditLogger.logTellerAction(employeeId, "ASSIST_TRANSFER_SUCCESS", sourceAccountId, LocalDateTime.now());
-            return transfer;
-        }
         return null;
     }
 
+    // ACCOUNT MANAGEMENT
     public boolean unfreezeAccount(String accountId) {
-        if (!isAuthenticated) throw new SecurityException("Not authenticated");
-        if (!securityManager.verifyAuthorization(employeeId, "UNFREEZE_ACCOUNT")) {
-            throw new SecurityException("Not authorized");
-        }
+        requireAuth();
 
-        AccountInfo account = databaseManager.retrieveAccount(accountId);
-        if (account == null || !account.getStatus().equals("FROZEN")) return false;
+        Account account = databaseManager.getAccountNumber(accountId);
+        if (account == null || !account.getStatus().equals("FROZEN"))
+            return false;
 
         account.unfreezeAccount();
         databaseManager.updateAccount(account);
-        securityManager.handleUnfreeze(accountId, employeeId);
-        auditLogger.logTellerAction(employeeId, "UNFREEZE_ACCOUNT", accountId, LocalDateTime.now());
         return true;
     }
 
-    public AccountInfo viewAccountDetails(String accountId) {
-        if (!isAuthenticated) throw new SecurityException("Not authenticated");
-        AccountInfo account = databaseManager.retrieveAccount(accountId);
-        if (account != null) {
-            auditLogger.logTellerAction(employeeId, "VIEW_ACCOUNT_DETAILS", accountId, LocalDateTime.now());
-        }
-        return account;
+    public Account viewAccountDetails(String accountId) {
+        requireAuth();
+        return databaseManager.getAccountNumber(accountId);
     }
 
-    public List<AccountInfo> getFrozenAccounts() {
-        if (!isAuthenticated) throw new SecurityException("Not authenticated");
+    public List<Account> getFrozenAccounts() {
+        requireAuth();
 
-        List<AccountInfo> frozenAccounts = new ArrayList<>();
-        for (AccountInfo account : databaseManager.retrieveAllAccounts()) {
-            if (account.getStatus().equals("FROZEN")) frozenAccounts.add(account);
+        List<Account> frozen = new ArrayList<>();
+        for (Account acc : databaseManager.retrieveAllAccounts()) {
+            if (acc.getStatus().equals("FROZEN"))
+                frozen.add(acc);
         }
-        auditLogger.logTellerAction(employeeId, "VIEW_FROZEN_ACCOUNTS", null, LocalDateTime.now());
-        return frozenAccounts;
+        return frozen;
     }
 
     public void logout() {
-        if (isAuthenticated) {
-            auditLogger.logTellerAction(employeeId, "LOGOUT", null, LocalDateTime.now());
-            this.isAuthenticated = false;
-        }
+        isAuthenticated = false;
+        loginManager.logout();
     }
 
+    // GETTERS
     public String getEmployeeId() { return employeeId; }
     public String getName() { return name; }
     public String getEmail() { return email; }

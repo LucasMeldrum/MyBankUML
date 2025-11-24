@@ -1,19 +1,16 @@
 package bank;
 
 public class Saving extends Account {
-    private double balance;
 
     public Saving(Customer customer) {
         super(customer);
-        this.balance = 0.0;
     }
 
     public Saving(Customer customer, double initialBalance) {
-        super(customer);
-        this.balance = initialBalance;
+        super(customer, initialBalance);
     }
 
-    public void title(){
+    public void title() {
         System.out.println("**Payments**");
     }
 
@@ -37,9 +34,14 @@ public class Saving extends Account {
         balance += amount;
         System.out.println("Deposited $" + amount + " to " + customer.getName() + "'s saving account");
         System.out.println("New balance: $" + balance);
-        
-        // Create transaction record
-        Transaction transaction = new Transaction();
+
+        Transaction transaction = new Transaction(
+                generateTransactionId(),
+                amount,
+                "deposit",
+                null,
+                this
+        );
         addTransaction(transaction);
         return true;
     }
@@ -52,9 +54,14 @@ public class Saving extends Account {
         balance -= amount;
         System.out.println("Withdrawn $" + amount + " from " + customer.getName() + "'s saving account");
         System.out.println("New balance: $" + balance);
-        
-        // Create transaction record
-        Transaction transaction = new Transaction();
+
+        Transaction transaction = new Transaction(
+                generateTransactionId(),
+                amount,
+                "withdraw",
+                this,
+                null
+        );
         addTransaction(transaction);
         return true;
     }
@@ -64,42 +71,30 @@ public class Saving extends Account {
         if (!validateTransaction(amount)) {
             return false;
         }
-        
+
         if (recipient == null) {
             System.out.println("Transfer failed: Recipient account is invalid");
             return false;
         }
 
-        // Deduct from this account
         balance -= amount;
-        
-        // Add to recipient account if it's a Saving account
-        if (recipient instanceof Saving) {
-            ((Saving) recipient).receiveTransfer(amount, this);
-        }
-        
-        System.out.println("Transferred $" + amount + " from " + customer.getName() + 
-                         " to " + recipient.getCustomer().getName());
+        recipient.updateBalance(amount);
+
+        System.out.println("Transferred $" + amount + " from " + customer.getName() +
+                " to " + recipient.getCustomer().getName());
         System.out.println("Your new balance: $" + balance);
-        
-        // Display recipient info
+
         recipient.getCustomer().printRecipientInfo();
-        
-        // Create transaction record
-        Transaction transaction = new Transaction();
+
+        Transaction transaction = new Transaction(
+                generateTransactionId(),
+                amount,
+                "transfer",
+                this,
+                recipient
+        );
         addTransaction(transaction);
         return true;
-    }
-
-    // Helper method to receive transfer
-    private void receiveTransfer(double amount, Account sender) {
-        balance += amount;
-        System.out.println("Received $" + amount + " from " + sender.getCustomer().getName());
-        System.out.println("New balance: $" + balance);
-        
-        // Create transaction record
-        Transaction transaction = new Transaction();
-        addTransaction(transaction);
     }
 
     // Validate if transaction is possible
@@ -116,13 +111,11 @@ public class Saving extends Account {
         return true;
     }
 
-    // Get current balance
-    public double getBalance() {
-        return balance;
-    }
-
-    // Display balance
     public void printBalance() {
         System.out.println(customer.getName() + "'s Saving Account Balance: $" + balance);
+    }
+
+    private int generateTransactionId() {
+        return (int) (Math.random() * 1000000);
     }
 }
