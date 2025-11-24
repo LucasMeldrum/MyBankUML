@@ -28,7 +28,7 @@ public class Transaction {
 
     public boolean validate(LoginManager loginManager) {
 
-        boolean authorized = loginManager.authorize(
+        boolean authorized = loginManager.authenticate(
                 "TransactionSystem",
                 "execute",
                 "transaction#" + transactionId
