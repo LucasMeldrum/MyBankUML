@@ -3,25 +3,13 @@ package bank;
 public class Card extends Account {
 
     public Card(Customer customer) {
-        super(customer);
+        super(customer, AccountType.CARD);
     }
 
     public Card(Customer customer, double initialBalance) {
-        super(customer, initialBalance);
+        super(customer, AccountType.CARD, initialBalance);
     }
 
-    @Override
-    public String getAccountType() {
-        return "Card";
-    }
-
-    @Override
-    public void pay() {
-        System.out.println("Card payment for: " + customer.getName());
-    }
-
-    @Override
-    public void receipt() {
-        System.out.println("Card receipt for: " + customer.getName());
-    }
+    // Card accounts currently have no extra behaviors specific to card,
+    // but you can add custom methods here if needed later.
 }

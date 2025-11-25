@@ -3,24 +3,30 @@ package bank;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Setter
 @Getter
 public class Customer {
-
+    private int customerId;
     private String name;
+    private String password;
     private String dateOfBirth;
     private String address;
     private String phone;
     private String email;
     private String accountNumber;
+    private List<Account> accounts = new ArrayList<>();
 
     public Customer(String name) {
         this.name = name;
     }
 
-    public Customer(String name, String dateOfBirth) {
+    public Customer(int customerId,String name, String password) {
+        this.customerId = customerId;
         this.name = name;
-        this.dateOfBirth = dateOfBirth;
+        this.password = password;
     }
 
     public Customer(String name, String dateOfBirth, String address, String phone, String email) {
@@ -131,6 +137,11 @@ public class Customer {
 
         return true;
     }
+    public void addAccount(Account account) {
+        accounts.add(account);
+    }
+
+
 
     private int generateTransactionId() {
         return (int) (Math.random() * 1000000);

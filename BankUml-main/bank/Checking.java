@@ -6,34 +6,13 @@ public class Checking extends Account {
     private double overdraftUsed = 0.0;
 
     public Checking(Customer customer) {
-        super(customer);
+        super(customer, AccountType.CHECKING);
     }
 
     public Checking(Customer customer, double initialBalance) {
-        super(customer, initialBalance);
+        super(customer, AccountType.CHECKING, initialBalance);
     }
 
-    @Override
-    public String getAccountType() {
-        return "Checking";
-    }
-
-    public void title() {
-        System.out.println("**Checking Account**");
-    }
-
-    @Override
-    public void pay() {
-        title();
-        System.out.println("Check payment for customer: " + customer.getName());
-    }
-
-    @Override
-    public void receipt() {
-        System.out.println("Checking account receipt for customer: " + customer.getName());
-    }
-
-    // Checking accounts can have overdraft
     public double getAvailableBalance() {
         return balance + (OVERDRAFT_LIMIT - overdraftUsed);
     }
@@ -53,17 +32,18 @@ public class Checking extends Account {
         }
 
         balance += amount;
-        System.out.println("Deposited $" + String.format("%.2f", amount) + " to checking account");
+        System.out.println("Deposited $" + String.format("%.2f", amount));
         System.out.println("New balance: $" + String.format("%.2f", balance));
 
-        Transaction transaction = new Transaction(
+        Transaction tx = new Transaction(
                 generateTransactionId(),
                 amount,
                 "deposit",
                 null,
                 this
         );
-        addTransaction(transaction);
+        addTransaction(tx);
+
         return true;
     }
 
@@ -91,18 +71,19 @@ public class Checking extends Account {
         System.out.println("Withdrawn $" + String.format("%.2f", amount));
         System.out.println("New balance: $" + String.format("%.2f", balance));
 
-        Transaction transaction = new Transaction(
+        Transaction tx = new Transaction(
                 generateTransactionId(),
                 amount,
                 "withdraw",
                 this,
                 null
         );
-        addTransaction(transaction);
+        addTransaction(tx);
+
         return true;
     }
 
     private int generateTransactionId() {
-        return (int) (Math.random() * 1000000);
+        return (int) (Math.random() * 1_000_000);
     }
 }
