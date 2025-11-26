@@ -1,0 +1,1137 @@
+package bank;
+
+import javax.swing.*;
+import java.awt.*;
+
+public class BankingSystemGUI {
+
+    private JFrame frame;
+    private DatabaseManager db;
+    private LoginManager loginManager;
+    private Teller currentTeller;
+    private Customer currentCustomer;
+
+    private final String ADMIN_USER = "admin";
+    private final String ADMIN_PASS = "admin";
+
+    public BankingSystemGUI() {
+        this.db = DatabaseManager.getInstance();
+        this.loginManager = new LoginManager(20);
+
+        // Set system look and feel for native Mac appearance
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            // Make UI components have rounded corners
+            UIManager.put("Button.arc", 10);
+            UIManager.put("Component.arc", 10);
+            UIManager.put("TextField.arc", 10);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        createMainFrame();
+        showMainMenu();
+    }
+
+    private void createMainFrame() {
+        frame = new JFrame("Banking System");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(800, 600);
+        frame.setLocationRelativeTo(null); // Center on screen
+    }
+
+    // ==================== SESSION CHECK HELPERS ====================
+    private boolean checkTellerSession() {
+        if (!loginManager.checkSession()) {
+            JOptionPane.showMessageDialog(frame,
+                    "Session expired. Please login again.",
+                    "Session Expired",
+                    JOptionPane.WARNING_MESSAGE);
+            currentTeller = null;
+            showMainMenu();
+            return false;
+        }
+        loginManager.refreshSession();
+        return true;
+    }
+
+    private boolean checkCustomerSession() {
+        if (!loginManager.checkSession()) {
+            JOptionPane.showMessageDialog(frame,
+                    "Session expired. Please login again.",
+                    "Session Expired",
+                    JOptionPane.WARNING_MESSAGE);
+            currentCustomer = null;
+            showMainMenu();
+            return false;
+        }
+        loginManager.refreshSession();
+        return true;
+    }
+
+    // ==================== MAIN MENU ====================
+    private void showMainMenu() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new GridBagLayout());
+        panel.setBackground(Color.WHITE); // Clean white background
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(15, 10, 15, 10);
+        gbc.gridx = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel title = new JLabel("MyBankUML App");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 38));
+        title.setForeground(new Color(0, 128, 55)); // TD Green
+        title.setHorizontalAlignment(SwingConstants.CENTER);
+        gbc.gridy = 0;
+        gbc.insets = new Insets(30, 10, 25, 10);
+        panel.add(title, gbc);
+
+        // Segmented control for user type (smaller)
+        gbc.gridy = 1;
+        gbc.insets = new Insets(5, 10, 20, 10);
+        JPanel segmentedControl = createSegmentedControl();
+        panel.add(segmentedControl, gbc);
+
+        // Username field
+        gbc.gridy = 2;
+        gbc.insets = new Insets(10, 10, 5, 10);
+        JLabel userLabel = new JLabel("Email or Username");
+        userLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        userLabel.setForeground(new Color(100, 100, 100));
+        panel.add(userLabel, gbc);
+
+        JTextField usernameField = new JTextField();
+        usernameField.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        usernameField.setPreferredSize(new Dimension(350, 45));
+        usernameField.setBorder(BorderFactory.createCompoundBorder(
+                new RoundedBorder(22, new Color(200, 200, 200)), // Pill shape
+                BorderFactory.createEmptyBorder(10, 15, 10, 15)
+        ));
+        gbc.gridy = 3;
+        gbc.insets = new Insets(5, 10, 10, 10);
+        panel.add(usernameField, gbc);
+
+        // Password field
+        gbc.gridy = 4;
+        gbc.insets = new Insets(10, 10, 5, 10);
+        JLabel passLabel = new JLabel("Password");
+        passLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        passLabel.setForeground(new Color(100, 100, 100));
+        panel.add(passLabel, gbc);
+
+        JPasswordField passwordField = new JPasswordField();
+        passwordField.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        passwordField.setPreferredSize(new Dimension(350, 45));
+        passwordField.setBorder(BorderFactory.createCompoundBorder(
+                new RoundedBorder(22, new Color(200, 200, 200)), // Pill shape
+                BorderFactory.createEmptyBorder(10, 15, 10, 15)
+        ));
+        gbc.gridy = 5;
+        gbc.insets = new Insets(5, 10, 5, 10); // Reduced bottom margin
+        panel.add(passwordField, gbc);
+
+        // Forgot Password link - right under password field
+        gbc.gridy = 6;
+        gbc.insets = new Insets(3, 10, 25, 10); // Small top margin, larger bottom
+        JLabel forgotPasswordLabel = new JLabel("<html><u>Forgot password?</u></html>");
+        forgotPasswordLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        forgotPasswordLabel.setForeground(new Color(0, 150, 65)); // TD Green
+        forgotPasswordLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        forgotPasswordLabel.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                JOptionPane.showMessageDialog(frame,
+                        "That's tuff lil bro",
+                        "Forgot Password",
+                        JOptionPane.INFORMATION_MESSAGE);
+            }
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                forgotPasswordLabel.setForeground(new Color(0, 170, 75));
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                forgotPasswordLabel.setForeground(new Color(0, 150, 65));
+            }
+        });
+        panel.add(forgotPasswordLabel, gbc);
+
+        // Sign In button - TD Green with rounded corners
+        JButton signInBtn = new JButton("Sign In") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 25, 25);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        signInBtn.setFont(new Font("Segoe UI", Font.BOLD, 17));
+        signInBtn.setPreferredSize(new Dimension(350, 50));
+        signInBtn.setForeground(Color.WHITE);
+        signInBtn.setBackground(new Color(0, 150, 65)); // TD Green
+        signInBtn.setFocusPainted(false);
+        signInBtn.setBorderPainted(false);
+        signInBtn.setContentAreaFilled(false);
+        signInBtn.setOpaque(false);
+        signInBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        signInBtn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                signInBtn.setBackground(new Color(0, 170, 75));
+                signInBtn.repaint();
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                signInBtn.setBackground(new Color(0, 150, 65));
+                signInBtn.repaint();
+            }
+        });
+
+        signInBtn.addActionListener(e -> {
+            String username = usernameField.getText().trim();
+            String password = new String(passwordField.getPassword());
+
+            if (username.isEmpty() || password.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Please fill in all fields.",
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            String selectedType = getSelectedUserType();
+            switch (selectedType) {
+                case "Customer" -> handleCustomerLogin(username, password);
+                case "Teller" -> handleTellerLogin(username, password);
+                case "Admin" -> handleAdminLogin(username, password);
+            }
+        });
+
+        gbc.gridy = 7;
+        gbc.insets = new Insets(10, 10, 10, 10);
+        panel.add(signInBtn, gbc);
+
+        // Exit button - fully rounded
+        JButton exitBtn = new JButton("Exit") {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 19, 19);
+                g2.setColor(new Color(200, 200, 200));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 19, 19);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        exitBtn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        exitBtn.setPreferredSize(new Dimension(350, 38));
+        exitBtn.setForeground(new Color(120, 120, 120));
+        exitBtn.setBackground(Color.WHITE);
+        exitBtn.setFocusPainted(false);
+        exitBtn.setBorderPainted(false);
+        exitBtn.setContentAreaFilled(false);
+        exitBtn.setOpaque(false);
+        exitBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        exitBtn.addActionListener(e -> System.exit(0));
+
+        gbc.gridy = 8;
+        gbc.insets = new Insets(10, 10, 30, 10);
+        panel.add(exitBtn, gbc);
+
+        frame.setContentPane(panel);
+        frame.setVisible(true);
+    }
+
+    // Rounded border class for text fields
+    static class RoundedBorder extends javax.swing.border.AbstractBorder {
+        private int radius;
+        private Color color;
+
+        RoundedBorder(int radius, Color color) {
+            this.radius = radius;
+            this.color = color;
+        }
+
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                    java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.drawRoundRect(x, y, width - 1, height - 1, radius, radius);
+            g2.dispose();
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c) {
+            return new Insets(2, 2, 2, 2);
+        }
+    }
+
+    // Segmented control buttons
+    private JButton customerBtn, tellerBtn, adminBtn;
+
+    private JPanel createSegmentedControl() {
+        JPanel segmentPanel = new JPanel();
+        segmentPanel.setLayout(new GridLayout(1, 3, 2, 0));
+        segmentPanel.setPreferredSize(new Dimension(280, 38)); // Smaller!
+        segmentPanel.setBackground(Color.WHITE);
+        segmentPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+
+        // Create three buttons for the segmented control
+        customerBtn = createSegmentButton("Customer", true);
+        tellerBtn = createSegmentButton("Teller", false);
+        adminBtn = createSegmentButton("Admin", false);
+
+        // Add click listeners to toggle selection
+        customerBtn.addActionListener(e -> selectSegment(customerBtn));
+        tellerBtn.addActionListener(e -> selectSegment(tellerBtn));
+        adminBtn.addActionListener(e -> selectSegment(adminBtn));
+
+        segmentPanel.add(customerBtn);
+        segmentPanel.add(tellerBtn);
+        segmentPanel.add(adminBtn);
+
+        return segmentPanel;
+    }
+
+    private JButton createSegmentButton(String text, boolean selected) {
+        JButton btn = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Draw pill-shaped background
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 19, 19);
+
+                // Draw border
+                g2.setColor(getBackground().equals(new Color(0, 150, 65))
+                        ? new Color(0, 150, 65)
+                        : new Color(200, 200, 200));
+                g2.setStroke(new BasicStroke(1));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 19, 19);
+
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setOpaque(false);
+
+        if (selected) {
+            btn.setBackground(new Color(0, 150, 65)); // TD Green
+            btn.setForeground(Color.WHITE);
+        } else {
+            btn.setBackground(Color.WHITE);
+            btn.setForeground(new Color(100, 100, 100));
+        }
+
+        return btn;
+    }
+
+    private void selectSegment(JButton selectedBtn) {
+        // Reset all buttons to unselected state
+        resetSegmentButton(customerBtn, false);
+        resetSegmentButton(tellerBtn, false);
+        resetSegmentButton(adminBtn, false);
+
+        // Highlight selected button
+        resetSegmentButton(selectedBtn, true);
+    }
+
+    private void resetSegmentButton(JButton btn, boolean selected) {
+        if (selected) {
+            btn.setBackground(new Color(0, 150, 65)); // TD Green
+            btn.setForeground(Color.WHITE);
+        } else {
+            btn.setBackground(Color.WHITE);
+            btn.setForeground(new Color(100, 100, 100));
+        }
+        btn.repaint();
+    }
+
+    private String getSelectedUserType() {
+        if (customerBtn.getBackground().equals(new Color(0, 150, 65))) {
+            return "Customer";
+        } else if (tellerBtn.getBackground().equals(new Color(0, 150, 65))) {
+            return "Teller";
+        } else {
+            return "Admin";
+        }
+    }
+
+    private void handleCustomerLogin(String id, String password) {
+        Customer customer = db.getCustomer(id);
+
+        if (customer == null) {
+            loginManager.loginAttempt(false);
+            JOptionPane.showMessageDialog(frame, "Customer not found.",
+                    "Login Failed", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        boolean correct = customer.getPassword().equals(password);
+
+        if (!loginManager.loginAttempt(correct)) {
+            JOptionPane.showMessageDialog(frame, "Incorrect password.",
+                    "Login Failed", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        currentCustomer = customer;
+        loginManager.refreshSession();
+        JOptionPane.showMessageDialog(frame, "Welcome, " + customer.getName(),
+                "Success", JOptionPane.INFORMATION_MESSAGE);
+        selectCustomerAccount();
+    }
+
+    private void handleTellerLogin(String username, String password) {
+        Teller teller = TellerDatabaseManager.getInstance().authenticate(username, password);
+        boolean correct = (teller != null);
+
+        if (!loginManager.loginAttempt(correct)) {
+            JOptionPane.showMessageDialog(frame,
+                    "Invalid credentials or account locked",
+                    "Login Failed",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        currentTeller = teller;
+        currentTeller.setAuthenticated(true); // CRITICAL FIX: Set teller as authenticated
+        loginManager.refreshSession();
+        JOptionPane.showMessageDialog(frame, "Welcome, " + teller.getName(),
+                "Success", JOptionPane.INFORMATION_MESSAGE);
+        showTellerMenu();
+    }
+
+    private void handleAdminLogin(String username, String password) {
+        if (!username.equals(ADMIN_USER) || !password.equals(ADMIN_PASS)) {
+            JOptionPane.showMessageDialog(frame, "Invalid admin credentials.",
+                    "Login Failed", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        JOptionPane.showMessageDialog(frame, "Admin login successful.",
+                "Success", JOptionPane.INFORMATION_MESSAGE);
+        showAdminMenu();
+    }
+
+    private JButton createStyledButton(String text, Color color) {
+        JButton btn = new JButton(text);
+        btn.setPreferredSize(new Dimension(250, 50));
+        btn.setFont(new Font("Arial", Font.BOLD, 16));
+        btn.setBackground(color);
+        btn.setForeground(Color.WHITE);
+        btn.setFocusPainted(false);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(color.darker(), 2),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        btn.setOpaque(true);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Hover effect
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                btn.setBackground(color.brighter());
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                btn.setBackground(color);
+            }
+        });
+        return btn;
+    }
+
+    // ==================== TELLER MENU ====================
+    private void showTellerMenu() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(Color.WHITE); // White background like customer menu
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(15, 10, 15, 10);
+        gbc.gridx = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        // Title - TD Green, Segoe UI
+        JLabel title = new JLabel("Teller Menu");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 32));
+        title.setForeground(new Color(0, 150, 65));
+        title.setHorizontalAlignment(SwingConstants.CENTER);
+        gbc.gridy = 0;
+        gbc.insets = new Insets(30, 10, 30, 10);
+        panel.add(title, gbc);
+
+        String[] options = {
+                "Search Account",
+                "View All Accounts",
+                "Assist Transaction",
+                "Assist Transfer",
+                "View Frozen Accounts",
+                "Unfreeze Account",
+                "Create New Account",
+                "Create New Customer",
+                "Logout"
+        };
+
+        // Create pill-shaped green buttons
+        gbc.insets = new Insets(8, 10, 8, 10);
+        for (int i = 0; i < options.length; i++) {
+            JButton btn = createPillButton(options[i], new Color(0, 150, 65));
+            btn.setPreferredSize(new Dimension(300, 50));
+            gbc.gridy = i + 1;
+
+            final int index = i;
+            btn.addActionListener(e -> {
+                switch (index) {
+                    case 0 -> searchAccount();
+                    case 1 -> viewAllAccounts();
+                    case 2 -> assistTransaction();
+                    case 3 -> assistTransfer();
+                    case 4 -> viewFrozenAccounts();
+                    case 5 -> unfreezeAccount();
+                    case 6 -> createNewAccount();
+                    case 7 -> createNewCustomer();
+                    case 8 -> {
+                        currentTeller = null;
+                        showMainMenu();
+                    }
+                }
+            });
+
+            panel.add(btn, gbc);
+        }
+
+        JScrollPane scrollPane = new JScrollPane(panel);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        frame.setContentPane(scrollPane);
+        frame.revalidate();
+    }
+
+    private void searchAccount() {
+        if (!checkTellerSession()) return;
+
+        String query = JOptionPane.showInputDialog(frame, "Enter Account ID or Customer Name:");
+        if (query == null || query.trim().isEmpty()) return;
+
+        try {
+            java.util.List<Account> results = currentTeller.searchAccounts(query.trim());
+
+            if (results.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "No accounts found.");
+            } else {
+                StringBuilder sb = new StringBuilder("Found " + results.size() + " account(s):\n\n");
+                for (Account acc : results) {
+                    sb.append(String.format("Account: %s | Owner: %s | Balance: $%.2f | Status: %s\n",
+                            acc.getAccountNumber(), acc.getCustomer().getName(),
+                            acc.getBalance(), acc.getStatus()));
+                }
+                JOptionPane.showMessageDialog(frame, sb.toString(), "Search Results",
+                        JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(frame, "Error searching accounts: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void viewAllAccounts() {
+        if (!checkTellerSession()) return;
+
+        java.util.List<Account> accounts = db.retrieveAllAccounts();
+
+        String[] columns = {"Account ID", "Owner", "Type", "Balance", "Status"};
+        Object[][] data = new Object[accounts.size()][5];
+
+        for (int i = 0; i < accounts.size(); i++) {
+            Account acc = accounts.get(i);
+            data[i][0] = acc.getAccountNumber();
+            data[i][1] = acc.getCustomer().getName();
+            data[i][2] = acc.getType();
+            data[i][3] = String.format("$%.2f", acc.getBalance());
+            data[i][4] = acc.getStatus();
+        }
+
+        JTable table = new JTable(data, columns);
+        table.setEnabled(false);
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setPreferredSize(new Dimension(700, 400));
+
+        JOptionPane.showMessageDialog(frame, scrollPane, "All Accounts",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void assistTransaction() {
+        if (!checkTellerSession()) return;
+
+        String id = JOptionPane.showInputDialog(frame, "Enter Account ID:");
+        if (id == null || id.trim().isEmpty()) return;
+
+        Account account = db.getAccountByNumber(id.trim());
+        if (account == null) {
+            JOptionPane.showMessageDialog(frame, "Account not found.");
+            return;
+        }
+
+        String type = JOptionPane.showInputDialog(frame, "Transaction Type (deposit/withdraw):");
+        if (type == null || type.trim().isEmpty()) return;
+
+        String amountStr = JOptionPane.showInputDialog(frame, "Amount:");
+        if (amountStr == null || amountStr.trim().isEmpty()) return;
+
+        try {
+            double amount = Double.parseDouble(amountStr);
+            Transaction tx = currentTeller.assistTransaction(account, type.trim(), amount);
+
+            if (tx != null) {
+                JOptionPane.showMessageDialog(frame, "Transaction successful!\nNew balance: $"
+                        + String.format("%.2f", account.getBalance()));
+            } else {
+                JOptionPane.showMessageDialog(frame, "Transaction failed. Account may be frozen or insufficient funds.");
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(frame, "Invalid amount.");
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(frame, "Error: " + ex.getMessage());
+        }
+    }
+
+    private void assistTransfer() {
+        if (!checkTellerSession()) return;
+
+        String sourceId = JOptionPane.showInputDialog(frame, "Source Account ID:");
+        if (sourceId == null || sourceId.trim().isEmpty()) return;
+
+        String destId = JOptionPane.showInputDialog(frame, "Destination Account ID:");
+        if (destId == null || destId.trim().isEmpty()) return;
+
+        Account source = db.getAccountByNumber(sourceId.trim());
+        Account dest = db.getAccountByNumber(destId.trim());
+
+        if (source == null || dest == null) {
+            JOptionPane.showMessageDialog(frame, "Invalid accounts.");
+            return;
+        }
+
+        String amountStr = JOptionPane.showInputDialog(frame, "Amount:");
+        if (amountStr == null || amountStr.trim().isEmpty()) return;
+
+        try {
+            double amount = Double.parseDouble(amountStr);
+            Transaction tx = currentTeller.assistTransfer(source, dest, amount);
+
+            if (tx != null) {
+                JOptionPane.showMessageDialog(frame,
+                        "Transfer successful!\n" +
+                                "Source balance: $" + String.format("%.2f", source.getBalance()) + "\n" +
+                                "Destination balance: $" + String.format("%.2f", dest.getBalance()));
+            } else {
+                JOptionPane.showMessageDialog(frame, "Transfer failed. Check account status and balance.");
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(frame, "Invalid amount.");
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(frame, "Error: " + ex.getMessage());
+        }
+    }
+
+    private void viewFrozenAccounts() {
+        if (!checkTellerSession()) return;
+
+        try {
+            java.util.List<Account> frozen = currentTeller.getFrozenAccounts();
+
+            if (frozen.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "No frozen accounts.");
+                return;
+            }
+
+            StringBuilder sb = new StringBuilder("Frozen Accounts:\n\n");
+            for (Account acc : frozen) {
+                sb.append(String.format("%s | %s | $%.2f\n",
+                        acc.getAccountNumber(), acc.getCustomer().getName(), acc.getBalance()));
+            }
+
+            JOptionPane.showMessageDialog(frame, sb.toString(), "Frozen Accounts",
+                    JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(frame, "Error viewing frozen accounts: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void unfreezeAccount() {
+        if (!checkTellerSession()) return;
+
+        String id = JOptionPane.showInputDialog(frame, "Enter Account ID to unfreeze:");
+        if (id == null || id.trim().isEmpty()) return;
+
+        try {
+            boolean success = currentTeller.unfreezeAccount(id.trim());
+            if (success) {
+                JOptionPane.showMessageDialog(frame, "Account unfrozen successfully!");
+            } else {
+                JOptionPane.showMessageDialog(frame,
+                        "Failed to unfreeze account. Account may not exist or is not frozen.");
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(frame, "Error: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void createNewAccount() {
+        if (!checkTellerSession()) return;
+
+        String customerId = JOptionPane.showInputDialog(frame, "Existing Customer ID:");
+        if (customerId == null || customerId.trim().isEmpty()) return;
+
+        Customer customer = db.getCustomer(customerId.trim());
+        if (customer == null) {
+            JOptionPane.showMessageDialog(frame, "Customer not found.");
+            return;
+        }
+
+        String type = JOptionPane.showInputDialog(frame,
+                "Account Type (card/check/checking/saving):");
+        if (type == null || type.trim().isEmpty()) return;
+
+        String balanceStr = JOptionPane.showInputDialog(frame, "Initial Balance:");
+        if (balanceStr == null || balanceStr.trim().isEmpty()) return;
+
+        try {
+            double balance = Double.parseDouble(balanceStr);
+            Account acc = switch (type.trim().toLowerCase()) {
+                case "card" -> new Card(customer, balance);
+                case "check" -> new Check(customer, balance);
+                case "checking" -> new Checking(customer, balance);
+                case "saving", "savings" -> new Saving(customer, balance);
+                default -> null;
+            };
+
+            if (acc == null) {
+                JOptionPane.showMessageDialog(frame, "Invalid account type.");
+                return;
+            }
+
+            String newId = db.generateNextAccountNumber(customer);
+            acc.setAccountNumber(newId);
+            customer.addAccount(acc);
+            db.updateAccount(acc);
+
+            JOptionPane.showMessageDialog(frame,
+                    "Created account " + newId + " for " + customer.getName());
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(frame, "Invalid balance.");
+        }
+    }
+
+    private void createNewCustomer() {
+        if (!checkTellerSession()) return;
+
+        String name = JOptionPane.showInputDialog(frame, "Full Name:");
+        if (name == null || name.trim().isEmpty()) return;
+
+        String password = JOptionPane.showInputDialog(frame, "Password:");
+        if (password == null || password.trim().isEmpty()) return;
+
+        String newCustomerId = db.generateNextCustomerId();
+        Customer newCustomer = new Customer(Integer.parseInt(newCustomerId), name.trim(), password.trim());
+        db.addCustomer(newCustomer);
+
+        JOptionPane.showMessageDialog(frame,
+                "Customer Created!\nAssigned Customer ID: " + newCustomerId);
+    }
+
+    // ==================== CUSTOMER LOGIN ====================
+    private void selectCustomerAccount() {
+        java.util.List<Account> accounts = currentCustomer.getAccounts();
+
+        if (accounts.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "You have no accounts.");
+            showMainMenu();
+            return;
+        }
+
+        String[] options = new String[accounts.size()];
+        for (int i = 0; i < accounts.size(); i++) {
+            Account acc = accounts.get(i);
+            options[i] = String.format("%s (%s) - $%.2f - %s",
+                    acc.getAccountNumber(), acc.getType(), acc.getBalance(), acc.getStatus());
+        }
+
+        String choice = (String) JOptionPane.showInputDialog(frame,
+                "Select an account:", "Account Selection",
+                JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+
+        if (choice != null) {
+            int index = java.util.Arrays.asList(options).indexOf(choice);
+            Account selected = accounts.get(index);
+            showCustomerMenu(selected);
+        } else {
+            showMainMenu();
+        }
+    }
+
+    private void showCustomerMenu(Account account) {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(Color.WHITE); // White background like login
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(15, 10, 15, 10);
+        gbc.gridx = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        // Title - TD Green, Segoe UI
+        JLabel title = new JLabel("Customer Menu");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 32));
+        title.setForeground(new Color(0, 150, 65));
+        title.setHorizontalAlignment(SwingConstants.CENTER);
+        gbc.gridy = 0;
+        gbc.insets = new Insets(30, 10, 30, 10);
+        panel.add(title, gbc);
+
+        String[] options = {
+                "View Account Details",
+                "Deposit",
+                "Withdraw",
+                "Transfer",
+                "Transaction History",
+                "Report Stolen Card",
+                "Logout"
+        };
+
+        // Create pill-shaped green buttons
+        gbc.insets = new Insets(8, 10, 8, 10);
+        for (int i = 0; i < options.length; i++) {
+            JButton btn = createPillButton(options[i], new Color(0, 150, 65));
+            btn.setPreferredSize(new Dimension(300, 50));
+            gbc.gridy = i + 1;
+
+            final int index = i;
+            btn.addActionListener(e -> {
+                switch (index) {
+                    case 0 -> viewAccountDetails(account);
+                    case 1 -> customerDeposit(account);
+                    case 2 -> customerWithdraw(account);
+                    case 3 -> customerTransfer(account);
+                    case 4 -> viewTransactionHistory(account);
+                    case 5 -> reportStolenCard(account);
+                    case 6 -> {
+                        currentCustomer = null;
+                        showMainMenu();
+                    }
+                }
+            });
+
+            panel.add(btn, gbc);
+        }
+
+        JScrollPane scrollPane = new JScrollPane(panel);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        frame.setContentPane(scrollPane);
+        frame.revalidate();
+    }
+
+    // Add this new helper method right after showCustomerMenu
+    private JButton createPillButton(String text, Color color) {
+        JButton btn = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(getBackground());
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 25, 25);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        btn.setForeground(Color.WHITE);
+        btn.setBackground(color);
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setOpaque(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Hover effect
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                btn.setBackground(new Color(0, 170, 75));
+                btn.repaint();
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                btn.setBackground(color);
+                btn.repaint();
+            }
+        });
+
+        return btn;
+    }
+
+    private void viewAccountDetails(Account account) {
+        // Refresh account data from database
+        Account freshAccount = db.getAccountByNumber(account.getAccountNumber());
+        if (freshAccount != null) {
+            account = freshAccount;
+        }
+
+        String details = String.format(
+                "Account Number: %s\nType: %s\nBalance: $%.2f\nStatus: %s",
+                account.getAccountNumber(), account.getType(),
+                account.getBalance(), account.getStatus());
+        JOptionPane.showMessageDialog(frame, details, "Account Details",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void customerDeposit(Account account) {
+        if (!checkCustomerSession()) return;
+
+        // Check if account is frozen
+        Account freshAccount = db.getAccountByNumber(account.getAccountNumber());
+        if (freshAccount != null && freshAccount.getStatus().equals("FROZEN")) {
+            JOptionPane.showMessageDialog(frame,
+                    "This account is frozen. Please contact a teller.",
+                    "Account Frozen", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        String amountStr = JOptionPane.showInputDialog(frame, "Amount to deposit:");
+        if (amountStr == null || amountStr.trim().isEmpty()) return;
+
+        try {
+            double amount = Double.parseDouble(amountStr);
+            boolean success = currentCustomer.deposit(account, amount, loginManager);
+
+            if (success) {
+                db.updateAccount(account);
+                JOptionPane.showMessageDialog(frame,
+                        "Deposit successful!\nNew balance: $" + String.format("%.2f", account.getBalance()));
+            } else {
+                JOptionPane.showMessageDialog(frame, "Deposit failed.");
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(frame, "Invalid amount.");
+        }
+    }
+
+    private void customerWithdraw(Account account) {
+        if (!checkCustomerSession()) return;
+
+        // Check if account is frozen
+        Account freshAccount = db.getAccountByNumber(account.getAccountNumber());
+        if (freshAccount != null && freshAccount.getStatus().equals("FROZEN")) {
+            JOptionPane.showMessageDialog(frame,
+                    "This account is frozen. Please contact a teller.",
+                    "Account Frozen", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        String amountStr = JOptionPane.showInputDialog(frame, "Amount to withdraw:");
+        if (amountStr == null || amountStr.trim().isEmpty()) return;
+
+        try {
+            double amount = Double.parseDouble(amountStr);
+            boolean success = currentCustomer.withdraw(account, amount, loginManager);
+
+            if (success) {
+                db.updateAccount(account);
+                JOptionPane.showMessageDialog(frame,
+                        "Withdrawal successful!\nNew balance: $" + String.format("%.2f", account.getBalance()));
+            } else {
+                JOptionPane.showMessageDialog(frame, "Withdrawal failed. Check balance.");
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(frame, "Invalid amount.");
+        }
+    }
+
+    private void customerTransfer(Account source) {
+        if (!checkCustomerSession()) return;
+
+        // Check if source account is frozen
+        Account freshSource = db.getAccountByNumber(source.getAccountNumber());
+        if (freshSource != null && freshSource.getStatus().equals("FROZEN")) {
+            JOptionPane.showMessageDialog(frame,
+                    "This account is frozen. Please contact a teller.",
+                    "Account Frozen", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        String destId = JOptionPane.showInputDialog(frame, "Destination Account ID:");
+        if (destId == null || destId.trim().isEmpty()) return;
+
+        Account dest = db.getAccountByNumber(destId.trim());
+        if (dest == null) {
+            JOptionPane.showMessageDialog(frame, "Destination account not found.");
+            return;
+        }
+
+        if (dest.getStatus().equals("FROZEN")) {
+            JOptionPane.showMessageDialog(frame, "Destination account is frozen.");
+            return;
+        }
+
+        String amountStr = JOptionPane.showInputDialog(frame, "Amount to transfer:");
+        if (amountStr == null || amountStr.trim().isEmpty()) return;
+
+        try {
+            double amount = Double.parseDouble(amountStr);
+            boolean success = currentCustomer.transfer(source, dest, amount, loginManager);
+
+            if (success) {
+                db.updateAccount(source);
+                db.updateAccount(dest);
+                JOptionPane.showMessageDialog(frame,
+                        "Transfer successful!\n" +
+                                "Your new balance: $" + String.format("%.2f", source.getBalance()));
+            } else {
+                JOptionPane.showMessageDialog(frame, "Transfer failed. Check balance.");
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(frame, "Invalid amount.");
+        }
+    }
+
+    private void viewTransactionHistory(Account account) {
+        if (!checkCustomerSession()) return;
+
+        java.util.List<Transaction> transactions =
+                TransactionsDatabaseManager.getInstance().loadTransactionsForAccount(account.getAccountNumber());
+
+        if (transactions.isEmpty()) {
+            JOptionPane.showMessageDialog(frame, "No transactions found.");
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder("Transaction History:\n\n");
+        for (Transaction tx : transactions) {
+            sb.append(String.format("ID: %d | %s | $%.2f | %s\n",
+                    tx.getTransactionId(), tx.getType(), tx.getAmount(), tx.getStatus()));
+        }
+
+        JOptionPane.showMessageDialog(frame, sb.toString(), "Transaction History",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void reportStolenCard(Account account) {
+        if (!checkCustomerSession()) return;
+
+        int confirm = JOptionPane.showConfirmDialog(frame,
+                "Are you sure you want to freeze this account?\nYou will need to contact a teller to unfreeze it.",
+                "Confirm Freeze",
+                JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            account.freezeAccount();
+            db.updateAccount(account);
+            JOptionPane.showMessageDialog(frame,
+                    "Your account has been frozen.\nContact a teller to unfreeze it.",
+                    "Account Frozen",
+                    JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    // ==================== ADMIN MENU ====================
+    private void showAdminMenu() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(Color.WHITE); // White background
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(15, 10, 15, 10);
+        gbc.gridx = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        // Title - TD Green, Segoe UI
+        JLabel title = new JLabel("Admin Menu");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 32));
+        title.setForeground(new Color(0, 150, 65));
+        title.setHorizontalAlignment(SwingConstants.CENTER);
+        gbc.gridy = 0;
+        gbc.insets = new Insets(30, 10, 30, 10);
+        panel.add(title, gbc);
+
+        String[] options = {"View All Tellers", "Add Teller", "Remove Teller", "Logout"};
+
+        // Create pill-shaped green buttons
+        gbc.insets = new Insets(8, 10, 8, 10);
+        for (int i = 0; i < options.length; i++) {
+            JButton btn = createPillButton(options[i], new Color(0, 150, 65));
+            btn.setPreferredSize(new Dimension(300, 50));
+            gbc.gridy = i + 1;
+
+            final int index = i;
+            btn.addActionListener(e -> {
+                switch (index) {
+                    case 0 -> viewAllTellers();
+                    case 1 -> addTeller();
+                    case 2 -> removeTeller();
+                    case 3 -> showMainMenu();
+                }
+            });
+
+            panel.add(btn, gbc);
+        }
+
+        JScrollPane scrollPane = new JScrollPane(panel);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        frame.setContentPane(scrollPane);
+        frame.revalidate();
+    }
+
+    private void viewAllTellers() {
+        StringBuilder sb = new StringBuilder("All Tellers:\n\n");
+        for (Teller t : TellerDatabaseManager.getInstance().getAllTellers()) {
+            sb.append(String.format("%s | %s | %s\n",
+                    t.getEmployeeId(), t.getName(), t.getEmail()));
+        }
+        JOptionPane.showMessageDialog(frame, sb.toString());
+    }
+
+    private void addTeller() {
+        String id = JOptionPane.showInputDialog(frame, "Employee ID:");
+        if (id == null || id.trim().isEmpty()) return;
+
+        String name = JOptionPane.showInputDialog(frame, "Name:");
+        if (name == null || name.trim().isEmpty()) return;
+
+        String email = JOptionPane.showInputDialog(frame, "Email:");
+        if (email == null || email.trim().isEmpty()) return;
+
+        String password = JOptionPane.showInputDialog(frame, "Password:");
+        if (password == null || password.trim().isEmpty()) return;
+
+        Teller newTeller = new Teller(id, name, email, password);
+        TellerDatabaseManager.getInstance().addTeller(newTeller);
+        JOptionPane.showMessageDialog(frame, "Teller added successfully!");
+    }
+
+    private void removeTeller() {
+        String id = JOptionPane.showInputDialog(frame, "Enter Teller ID to remove:");
+        if (id == null || id.trim().isEmpty()) return;
+
+        TellerDatabaseManager tdm = TellerDatabaseManager.getInstance();
+        Teller t = tdm.getTeller(id.trim());
+
+        if (t == null) {
+            JOptionPane.showMessageDialog(frame, "Teller not found.");
+            return;
+        }
+
+        tdm.removeTeller(id.trim());
+        JOptionPane.showMessageDialog(frame, "Teller removed successfully!");
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new BankingSystemGUI());
+    }
+}
