@@ -24,20 +24,17 @@ public class Teller {
         this.employeeId = employeeId;
         this.name = name;
         this.email = email;
+        this.password = password;
         this.isAuthenticated = false;
 
         this.loginManager = new LoginManager(20);
         this.databaseManager = DatabaseManager.getInstance();
     }
 
-    // ================= AUTH =================
-    //not used anywhere
-    /*public boolean login(String username, String password) {
-        boolean ok = loginManager.login(username, password);
-        if (ok) isAuthenticated = true;
-        return ok;
+    public void setAuthenticated(boolean authenticated) {
+        this.isAuthenticated = authenticated;
     }
-    */
+
     private void checkSession() {
         loginManager.checkSession();
         if (!isAuthenticated) {
