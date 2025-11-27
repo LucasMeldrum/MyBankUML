@@ -1,8 +1,12 @@
 package bank;
 
+import javax.swing.SwingUtilities;
+
 public class Main {
     public static void main(String[] args) {
-        BankingSystem system = new BankingSystem();
-        system.start();
+        // Launch GUI on the Event Dispatch Thread
+        SwingUtilities.invokeLater(() -> {
+            new BankingSystemGUI();
+        });
     }
 }
