@@ -186,33 +186,44 @@ public class BankingSystemGUI {
         gbc.insets = new Insets(10, 10, 10, 10);
         panel.add(signInBtn, gbc);
 
-        // Exit button - fully rounded
+        // Exit button - fully rounded with red color
         JButton exitBtn = new JButton("Exit") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(getBackground());
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 19, 19);
-                g2.setColor(new Color(200, 200, 200));
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 19, 19);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 25, 25);
                 g2.dispose();
                 super.paintComponent(g);
             }
         };
-        exitBtn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        exitBtn.setPreferredSize(new Dimension(350, 38));
-        exitBtn.setForeground(new Color(120, 120, 120));
-        exitBtn.setBackground(Color.WHITE);
+        exitBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        exitBtn.setPreferredSize(new Dimension(350, 45));
+        exitBtn.setForeground(Color.WHITE);
+        exitBtn.setBackground(new Color(220, 53, 69)); // Red color
         exitBtn.setFocusPainted(false);
         exitBtn.setBorderPainted(false);
         exitBtn.setContentAreaFilled(false);
         exitBtn.setOpaque(false);
         exitBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        exitBtn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                exitBtn.setBackground(new Color(200, 35, 51));
+                exitBtn.repaint();
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                exitBtn.setBackground(new Color(220, 53, 69));
+                exitBtn.repaint();
+            }
+        });
+        
+        exitBtn.addActionListener(e -> System.exit(0));
         exitBtn.addActionListener(e -> System.exit(0));
 
         gbc.gridy = 7;
-        gbc.insets = new Insets(10, 10, 30, 10);
+        gbc.insets = new Insets(5, 10, 30, 10);
         panel.add(exitBtn, gbc);
 
         frame.setContentPane(panel);
@@ -487,7 +498,9 @@ public class BankingSystemGUI {
 
         // Create 2-column grid layout
         for (int i = 0; i < options.length; i++) {
-            JButton btn = createPillButton(options[i], new Color(0, 150, 65));
+            // Use red color for Logout button
+            Color btnColor = options[i].equals("Logout") ? new Color(220, 53, 69) : new Color(0, 150, 65);
+            JButton btn = createPillButton(options[i], btnColor);
             btn.setPreferredSize(new Dimension(250, 50));
             
             gbc.gridx = i % 2;
@@ -795,27 +808,78 @@ public class BankingSystemGUI {
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(Color.WHITE);
         
-        // Title panel
-        JPanel titlePanel = new JPanel();
-        titlePanel.setBackground(Color.WHITE);
-        titlePanel.setBorder(BorderFactory.createEmptyBorder(30, 10, 20, 10));
+        // Title and account info panel
+        JPanel topPanel = new JPanel();
+        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
+        topPanel.setBackground(Color.WHITE);
+        topPanel.setBorder(BorderFactory.createEmptyBorder(30, 10, 20, 10));
+        
         JLabel title = new JLabel("Customer Menu");
         title.setFont(new Font("Segoe UI", Font.BOLD, 32));
         title.setForeground(new Color(0, 150, 65));
-        title.setHorizontalAlignment(SwingConstants.CENTER);
-        titlePanel.add(title);
+        title.setAlignmentX(Component.CENTER_ALIGNMENT);
+        topPanel.add(title);
+        
+        topPanel.add(Box.createVerticalStrut(20));
+        
+        // Account details card
+        JPanel accountCard = new JPanel();
+        accountCard.setLayout(new BoxLayout(accountCard, BoxLayout.Y_AXIS));
+        accountCard.setBackground(new Color(245, 255, 250));
+        accountCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(0, 150, 65, 100), 2, true),
+            BorderFactory.createEmptyBorder(20, 25, 20, 25)
+        ));
+        accountCard.setMaximumSize(new Dimension(500, 150));
+        accountCard.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        // Refresh account data
+        Account freshAccount = db.getAccountByNumber(account.getAccountNumber());
+        if (freshAccount != null) {
+            account = freshAccount;
+        }
+        
+        JLabel accountNumLabel = new JLabel("Account: " + account.getAccountNumber());
+        accountNumLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        accountNumLabel.setForeground(new Color(0, 150, 65));
+        accountNumLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        JLabel typeLabel = new JLabel("Type: " + account.getType());
+        typeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        typeLabel.setForeground(new Color(60, 60, 60));
+        typeLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        JLabel balanceLabel = new JLabel(String.format("Balance: $%.2f", account.getBalance()));
+        balanceLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        balanceLabel.setForeground(new Color(0, 120, 50));
+        balanceLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        JLabel statusLabel = new JLabel("Status: " + account.getStatus());
+        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        Color statusColor = account.getStatus().equals("ACTIVE") ? new Color(0, 150, 65) : new Color(220, 53, 69);
+        statusLabel.setForeground(statusColor);
+        statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        accountCard.add(accountNumLabel);
+        accountCard.add(Box.createVerticalStrut(8));
+        accountCard.add(typeLabel);
+        accountCard.add(Box.createVerticalStrut(10));
+        accountCard.add(balanceLabel);
+        accountCard.add(Box.createVerticalStrut(8));
+        accountCard.add(statusLabel);
+        
+        topPanel.add(accountCard);
         
         // Button panel with grid layout
         JPanel buttonPanel = new JPanel(new GridBagLayout());
         buttonPanel.setBackground(Color.WHITE);
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 30, 30, 30));
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 30, 30));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(8, 15, 8, 15);
         gbc.weightx = 1.0;
 
         String[] options = {
-                "View Account Details",
                 "Deposit",
                 "Withdraw",
                 "Transfer",
@@ -826,22 +890,24 @@ public class BankingSystemGUI {
 
         // Create 2-column grid layout
         for (int i = 0; i < options.length; i++) {
-            JButton btn = createPillButton(options[i], new Color(0, 150, 65));
+            // Use red color for Logout button
+            Color btnColor = options[i].equals("Logout") ? new Color(220, 53, 69) : new Color(0, 150, 65);
+            JButton btn = createPillButton(options[i], btnColor);
             btn.setPreferredSize(new Dimension(250, 50));
             
             gbc.gridx = i % 2;
             gbc.gridy = i / 2;
 
             final int index = i;
+            final Account currentAccount = account;
             btn.addActionListener(e -> {
                 switch (index) {
-                    case 0 -> viewAccountDetails(account);
-                    case 1 -> customerDeposit(account);
-                    case 2 -> customerWithdraw(account);
-                    case 3 -> customerTransfer(account);
-                    case 4 -> viewTransactionHistory(account);
-                    case 5 -> reportStolenCard(account);
-                    case 6 -> {
+                    case 0 -> customerDeposit(currentAccount);
+                    case 1 -> customerWithdraw(currentAccount);
+                    case 2 -> customerTransfer(currentAccount);
+                    case 3 -> viewTransactionHistory(currentAccount);
+                    case 4 -> reportStolenCard(currentAccount);
+                    case 5 -> {
                         currentCustomer = null;
                         showMainMenu();
                     }
@@ -851,7 +917,7 @@ public class BankingSystemGUI {
             buttonPanel.add(btn, gbc);
         }
 
-        mainPanel.add(titlePanel, BorderLayout.NORTH);
+        mainPanel.add(topPanel, BorderLayout.NORTH);
         mainPanel.add(buttonPanel, BorderLayout.CENTER);
         
         frame.setContentPane(mainPanel);
@@ -881,10 +947,16 @@ public class BankingSystemGUI {
         btn.setOpaque(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // Hover effect
+        // Hover effect with different colors for green vs red
         btn.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                btn.setBackground(new Color(0, 170, 75));
+                if (color.equals(new Color(220, 53, 69))) {
+                    // Red button hover - darker red
+                    btn.setBackground(new Color(200, 35, 51));
+                } else {
+                    // Green button hover - lighter green
+                    btn.setBackground(new Color(0, 170, 75));
+                }
                 btn.repaint();
             }
             public void mouseExited(java.awt.event.MouseEvent evt) {
@@ -934,6 +1006,8 @@ public class BankingSystemGUI {
                 showStyledMessage("Success",
                         "Deposit successful!\nNew balance: $" + String.format("%.2f", account.getBalance()),
                         JOptionPane.INFORMATION_MESSAGE);
+                // Refresh the dashboard to show updated balance
+                showCustomerMenu(account);
             } else {
                 showStyledMessage("Failed", "Deposit failed.", JOptionPane.ERROR_MESSAGE);
             }
@@ -966,6 +1040,8 @@ public class BankingSystemGUI {
                 showStyledMessage("Success",
                         "Withdrawal successful!\nNew balance: $" + String.format("%.2f", account.getBalance()),
                         JOptionPane.INFORMATION_MESSAGE);
+                // Refresh the dashboard to show updated balance
+                showCustomerMenu(account);
             } else {
                 showStyledMessage("Failed", "Withdrawal failed. Check balance.", JOptionPane.ERROR_MESSAGE);
             }
@@ -1013,6 +1089,8 @@ public class BankingSystemGUI {
                 showStyledMessage("Success",
                         "Transfer successful!\nYour new balance: $" + String.format("%.2f", source.getBalance()),
                         JOptionPane.INFORMATION_MESSAGE);
+                // Refresh the dashboard to show updated balance
+                showCustomerMenu(source);
             } else {
                 showStyledMessage("Failed", "Transfer failed. Check balance.", JOptionPane.ERROR_MESSAGE);
             }
@@ -1055,6 +1133,8 @@ public class BankingSystemGUI {
             showStyledMessage("Account Frozen",
                     "Your account has been frozen.\nContact a teller to unfreeze it.",
                     JOptionPane.INFORMATION_MESSAGE);
+            // Refresh the dashboard to show updated status
+            showCustomerMenu(account);
         }
     }
 
@@ -1086,7 +1166,9 @@ public class BankingSystemGUI {
 
         // Create 2-column grid layout
         for (int i = 0; i < options.length; i++) {
-            JButton btn = createPillButton(options[i], new Color(0, 150, 65));
+            // Use red color for Logout button
+            Color btnColor = options[i].equals("Logout") ? new Color(220, 53, 69) : new Color(0, 150, 65);
+            JButton btn = createPillButton(options[i], btnColor);
             btn.setPreferredSize(new Dimension(250, 50));
             
             gbc.gridx = i % 2;
