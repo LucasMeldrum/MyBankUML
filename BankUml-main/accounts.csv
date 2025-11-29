@@ -1,0 +1,9 @@
+customerId,customerName,password,accountNumber,accountType,balance,status
+1,John Doe,john123,ACC101,CARD,499.00,ACTIVE
+1,John Doe,john123,ACC102,CHECKING,5700.00,FROZEN
+1,John Doe,john123,ACC103,SAVING,9100.00,ACTIVE
+2,Alice Smith,alice123,ACC201,CHECK,1626.00,ACTIVE
+3,Bob Johnson,bob123,ACC301,SAVING,3000.00,ACTIVE
+3,Bob Johnson,bob123,ACC302,CARD,200.00,ACTIVE
+3,Bob Johnson,bob123,ACC303,CARD,500.00,ACTIVE
+4,Sadie Smith,sadie123,ACC401,CHECKING,1000.00,ACTIVE

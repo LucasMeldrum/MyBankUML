@@ -96,7 +96,7 @@ public class BankingSystemGUI {
         // Username field
         gbc.gridy = 2;
         gbc.insets = new Insets(10, 10, 5, 10);
-        JLabel userLabel = new JLabel("Email or Username");
+        JLabel userLabel = new JLabel("Email or Account ID");
         userLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         userLabel.setForeground(new Color(100, 100, 100));
         panel.add(userLabel, gbc);
@@ -128,31 +128,8 @@ public class BankingSystemGUI {
                 BorderFactory.createEmptyBorder(10, 15, 10, 15)
         ));
         gbc.gridy = 5;
-        gbc.insets = new Insets(5, 10, 5, 10); // Reduced bottom margin
+        gbc.insets = new Insets(5, 10, 25, 10); // More bottom margin since no forgot password link
         panel.add(passwordField, gbc);
-
-        // Forgot Password link - right under password field
-        gbc.gridy = 6;
-        gbc.insets = new Insets(3, 10, 25, 10); // Small top margin, larger bottom
-        JLabel forgotPasswordLabel = new JLabel("<html><u>Forgot password?</u></html>");
-        forgotPasswordLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        forgotPasswordLabel.setForeground(new Color(0, 150, 65)); // TD Green
-        forgotPasswordLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        forgotPasswordLabel.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent evt) {
-                JOptionPane.showMessageDialog(frame,
-                        "That's tuff lil bro",
-                        "Forgot Password",
-                        JOptionPane.INFORMATION_MESSAGE);
-            }
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                forgotPasswordLabel.setForeground(new Color(0, 170, 75));
-            }
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                forgotPasswordLabel.setForeground(new Color(0, 150, 65));
-            }
-        });
-        panel.add(forgotPasswordLabel, gbc);
 
         // Sign In button - TD Green with rounded corners
         JButton signInBtn = new JButton("Sign In") {
@@ -205,37 +182,48 @@ public class BankingSystemGUI {
             }
         });
 
-        gbc.gridy = 7;
+        gbc.gridy = 6;
         gbc.insets = new Insets(10, 10, 10, 10);
         panel.add(signInBtn, gbc);
 
-        // Exit button - fully rounded
+        // Exit button - fully rounded with red color
         JButton exitBtn = new JButton("Exit") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(getBackground());
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 19, 19);
-                g2.setColor(new Color(200, 200, 200));
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 19, 19);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 25, 25);
                 g2.dispose();
                 super.paintComponent(g);
             }
         };
-        exitBtn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        exitBtn.setPreferredSize(new Dimension(350, 38));
-        exitBtn.setForeground(new Color(120, 120, 120));
-        exitBtn.setBackground(Color.WHITE);
+        exitBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        exitBtn.setPreferredSize(new Dimension(350, 45));
+        exitBtn.setForeground(Color.WHITE);
+        exitBtn.setBackground(new Color(220, 53, 69)); // Red color
         exitBtn.setFocusPainted(false);
         exitBtn.setBorderPainted(false);
         exitBtn.setContentAreaFilled(false);
         exitBtn.setOpaque(false);
         exitBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        exitBtn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                exitBtn.setBackground(new Color(200, 35, 51));
+                exitBtn.repaint();
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                exitBtn.setBackground(new Color(220, 53, 69));
+                exitBtn.repaint();
+            }
+        });
+        
+        exitBtn.addActionListener(e -> System.exit(0));
         exitBtn.addActionListener(e -> System.exit(0));
 
-        gbc.gridy = 8;
-        gbc.insets = new Insets(10, 10, 30, 10);
+        gbc.gridy = 7;
+        gbc.insets = new Insets(5, 10, 30, 10);
         panel.add(exitBtn, gbc);
 
         frame.setContentPane(panel);
@@ -273,15 +261,15 @@ public class BankingSystemGUI {
 
     private JPanel createSegmentedControl() {
         JPanel segmentPanel = new JPanel();
-        segmentPanel.setLayout(new GridLayout(1, 3, 2, 0));
-        segmentPanel.setPreferredSize(new Dimension(280, 38)); // Smaller!
+        segmentPanel.setLayout(new GridLayout(1, 3, 20, 0)); // More spacing between cards
+        segmentPanel.setPreferredSize(new Dimension(450, 80)); // Adjust height without icons
         segmentPanel.setBackground(Color.WHITE);
         segmentPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
-        // Create three buttons for the segmented control
-        customerBtn = createSegmentButton("Customer", true);
-        tellerBtn = createSegmentButton("Teller", false);
-        adminBtn = createSegmentButton("Admin", false);
+        // Create three card buttons for the segmented control
+        customerBtn = createSegmentCard("Customer", "", true);
+        tellerBtn = createSegmentCard("Teller", "", false);
+        adminBtn = createSegmentCard("Admin", "", false);
 
         // Add click listeners to toggle selection
         customerBtn.addActionListener(e -> selectSegment(customerBtn));
@@ -295,39 +283,55 @@ public class BankingSystemGUI {
         return segmentPanel;
     }
 
-    private JButton createSegmentButton(String text, boolean selected) {
+    private JButton createSegmentCard(String text, String emoji, boolean selected) {
         JButton btn = new JButton(text) {
+            private boolean isSelected = selected;
+            
+            public void setSelected(boolean sel) {
+                isSelected = sel;
+            }
+            
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                // Draw pill-shaped background
+                // Draw card background with shadow effect
+                if (isSelected) {
+                    g2.setColor(new Color(0, 150, 65, 30)); // Slight shadow
+                    g2.fillRoundRect(2, 2, getWidth() - 2, getHeight() - 2, 15, 15);
+                }
+
                 g2.setColor(getBackground());
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 19, 19);
+                g2.fillRoundRect(0, 0, getWidth() - 2, getHeight() - 2, 15, 15);
 
                 // Draw border
-                g2.setColor(getBackground().equals(new Color(0, 150, 65))
-                        ? new Color(0, 150, 65)
-                        : new Color(200, 200, 200));
-                g2.setStroke(new BasicStroke(1));
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 19, 19);
+                if (isSelected) {
+                    g2.setColor(new Color(0, 150, 65));
+                    g2.setStroke(new BasicStroke(2.5f));
+                } else {
+                    g2.setColor(new Color(220, 220, 220));
+                    g2.setStroke(new BasicStroke(1.5f));
+                }
+                g2.drawRoundRect(0, 0, getWidth() - 3, getHeight() - 3, 15, 15);
 
                 g2.dispose();
                 super.paintComponent(g);
             }
         };
 
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btn.setFocusPainted(false);
         btn.setBorderPainted(false);
         btn.setContentAreaFilled(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btn.setOpaque(false);
+        btn.setVerticalAlignment(SwingConstants.CENTER);
+        btn.setHorizontalAlignment(SwingConstants.CENTER);
 
         if (selected) {
-            btn.setBackground(new Color(0, 150, 65)); // TD Green
-            btn.setForeground(Color.WHITE);
+            btn.setBackground(new Color(245, 255, 250)); // Light green tint
+            btn.setForeground(new Color(0, 150, 65));
         } else {
             btn.setBackground(Color.WHITE);
             btn.setForeground(new Color(100, 100, 100));
@@ -348,19 +352,25 @@ public class BankingSystemGUI {
 
     private void resetSegmentButton(JButton btn, boolean selected) {
         if (selected) {
-            btn.setBackground(new Color(0, 150, 65)); // TD Green
-            btn.setForeground(Color.WHITE);
+            btn.setBackground(new Color(245, 255, 250)); // Light green tint
+            btn.setForeground(new Color(0, 150, 65));
         } else {
             btn.setBackground(Color.WHITE);
             btn.setForeground(new Color(100, 100, 100));
+        }
+        // Update the custom button's selection state
+        try {
+            btn.getClass().getMethod("setSelected", boolean.class).invoke(btn, selected);
+        } catch (Exception e) {
+            // Ignore if method doesn't exist
         }
         btn.repaint();
     }
 
     private String getSelectedUserType() {
-        if (customerBtn.getBackground().equals(new Color(0, 150, 65))) {
+        if (customerBtn.getBackground().equals(new Color(245, 255, 250))) {
             return "Customer";
-        } else if (tellerBtn.getBackground().equals(new Color(0, 150, 65))) {
+        } else if (tellerBtn.getBackground().equals(new Color(245, 255, 250))) {
             return "Teller";
         } else {
             return "Admin";
@@ -452,21 +462,27 @@ public class BankingSystemGUI {
 
     // ==================== TELLER MENU ====================
     private void showTellerMenu() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(Color.WHITE); // White background like customer menu
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(15, 10, 15, 10);
-        gbc.gridx = 0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        // Title - TD Green, Segoe UI
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(Color.WHITE);
+        
+        // Title panel
+        JPanel titlePanel = new JPanel();
+        titlePanel.setBackground(Color.WHITE);
+        titlePanel.setBorder(BorderFactory.createEmptyBorder(30, 10, 20, 10));
         JLabel title = new JLabel("Teller Menu");
         title.setFont(new Font("Segoe UI", Font.BOLD, 32));
         title.setForeground(new Color(0, 150, 65));
         title.setHorizontalAlignment(SwingConstants.CENTER);
-        gbc.gridy = 0;
-        gbc.insets = new Insets(30, 10, 30, 10);
-        panel.add(title, gbc);
+        titlePanel.add(title);
+        
+        // Button panel with grid layout
+        JPanel buttonPanel = new JPanel(new GridBagLayout());
+        buttonPanel.setBackground(Color.WHITE);
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 30, 30, 30));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(8, 15, 8, 15);
+        gbc.weightx = 1.0;
 
         String[] options = {
                 "Search Account",
@@ -480,12 +496,15 @@ public class BankingSystemGUI {
                 "Logout"
         };
 
-        // Create pill-shaped green buttons
-        gbc.insets = new Insets(8, 10, 8, 10);
+        // Create 2-column grid layout
         for (int i = 0; i < options.length; i++) {
-            JButton btn = createPillButton(options[i], new Color(0, 150, 65));
-            btn.setPreferredSize(new Dimension(300, 50));
-            gbc.gridy = i + 1;
+            // Use red color for Logout button
+            Color btnColor = options[i].equals("Logout") ? new Color(220, 53, 69) : new Color(0, 150, 65);
+            JButton btn = createPillButton(options[i], btnColor);
+            btn.setPreferredSize(new Dimension(250, 50));
+            
+            gbc.gridx = i % 2;
+            gbc.gridy = i / 2;
 
             final int index = i;
             btn.addActionListener(e -> {
@@ -505,27 +524,27 @@ public class BankingSystemGUI {
                 }
             });
 
-            panel.add(btn, gbc);
+            buttonPanel.add(btn, gbc);
         }
 
-        JScrollPane scrollPane = new JScrollPane(panel);
-        scrollPane.setBorder(null);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        frame.setContentPane(scrollPane);
+        mainPanel.add(titlePanel, BorderLayout.NORTH);
+        mainPanel.add(buttonPanel, BorderLayout.CENTER);
+        
+        frame.setContentPane(mainPanel);
         frame.revalidate();
     }
 
     private void searchAccount() {
         if (!checkTellerSession()) return;
 
-        String query = JOptionPane.showInputDialog(frame, "Enter Account ID or Customer Name:");
+        String query = showStyledInputDialog("Search Account", "Enter Account ID or Customer Name:");
         if (query == null || query.trim().isEmpty()) return;
 
         try {
             java.util.List<Account> results = currentTeller.searchAccounts(query.trim());
 
             if (results.isEmpty()) {
-                JOptionPane.showMessageDialog(frame, "No accounts found.");
+                showStyledMessage("Search Results", "No accounts found.", JOptionPane.INFORMATION_MESSAGE);
             } else {
                 StringBuilder sb = new StringBuilder("Found " + results.size() + " account(s):\n\n");
                 for (Account acc : results) {
@@ -533,12 +552,10 @@ public class BankingSystemGUI {
                             acc.getAccountNumber(), acc.getCustomer().getName(),
                             acc.getBalance(), acc.getStatus()));
                 }
-                JOptionPane.showMessageDialog(frame, sb.toString(), "Search Results",
-                        JOptionPane.INFORMATION_MESSAGE);
+                showStyledMessage("Search Results", sb.toString(), JOptionPane.INFORMATION_MESSAGE);
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(frame, "Error searching accounts: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            showStyledMessage("Error", "Error searching accounts: " + ex.getMessage(), JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -571,19 +588,19 @@ public class BankingSystemGUI {
     private void assistTransaction() {
         if (!checkTellerSession()) return;
 
-        String id = JOptionPane.showInputDialog(frame, "Enter Account ID:");
+        String id = showStyledInputDialog("Assist Transaction", "Enter Account ID:");
         if (id == null || id.trim().isEmpty()) return;
 
         Account account = db.getAccountByNumber(id.trim());
         if (account == null) {
-            JOptionPane.showMessageDialog(frame, "Account not found.");
+            showStyledMessage("Error", "Account not found.", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        String type = JOptionPane.showInputDialog(frame, "Transaction Type (deposit/withdraw):");
+        String type = showStyledInputDialog("Transaction Type", "Transaction Type (deposit/withdraw):");
         if (type == null || type.trim().isEmpty()) return;
 
-        String amountStr = JOptionPane.showInputDialog(frame, "Amount:");
+        String amountStr = showStyledInputDialog("Amount", "Amount:");
         if (amountStr == null || amountStr.trim().isEmpty()) return;
 
         try {
@@ -591,36 +608,39 @@ public class BankingSystemGUI {
             Transaction tx = currentTeller.assistTransaction(account, type.trim(), amount);
 
             if (tx != null) {
-                JOptionPane.showMessageDialog(frame, "Transaction successful!\nNew balance: $"
-                        + String.format("%.2f", account.getBalance()));
+                showStyledMessage("Success", 
+                        "Transaction successful!\nNew balance: $" + String.format("%.2f", account.getBalance()),
+                        JOptionPane.INFORMATION_MESSAGE);
             } else {
-                JOptionPane.showMessageDialog(frame, "Transaction failed. Account may be frozen or insufficient funds.");
+                showStyledMessage("Failed", 
+                        "Transaction failed. Account may be frozen or insufficient funds.",
+                        JOptionPane.ERROR_MESSAGE);
             }
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(frame, "Invalid amount.");
+            showStyledMessage("Invalid Input", "Invalid amount.", JOptionPane.ERROR_MESSAGE);
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(frame, "Error: " + ex.getMessage());
+            showStyledMessage("Error", "Error: " + ex.getMessage(), JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void assistTransfer() {
         if (!checkTellerSession()) return;
 
-        String sourceId = JOptionPane.showInputDialog(frame, "Source Account ID:");
+        String sourceId = showStyledInputDialog("Assist Transfer", "Source Account ID:");
         if (sourceId == null || sourceId.trim().isEmpty()) return;
 
-        String destId = JOptionPane.showInputDialog(frame, "Destination Account ID:");
+        String destId = showStyledInputDialog("Destination Account", "Destination Account ID:");
         if (destId == null || destId.trim().isEmpty()) return;
 
         Account source = db.getAccountByNumber(sourceId.trim());
         Account dest = db.getAccountByNumber(destId.trim());
 
         if (source == null || dest == null) {
-            JOptionPane.showMessageDialog(frame, "Invalid accounts.");
+            showStyledMessage("Error", "Invalid accounts.", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        String amountStr = JOptionPane.showInputDialog(frame, "Amount:");
+        String amountStr = showStyledInputDialog("Amount", "Amount:");
         if (amountStr == null || amountStr.trim().isEmpty()) return;
 
         try {
@@ -628,17 +648,20 @@ public class BankingSystemGUI {
             Transaction tx = currentTeller.assistTransfer(source, dest, amount);
 
             if (tx != null) {
-                JOptionPane.showMessageDialog(frame,
+                showStyledMessage("Success",
                         "Transfer successful!\n" +
                                 "Source balance: $" + String.format("%.2f", source.getBalance()) + "\n" +
-                                "Destination balance: $" + String.format("%.2f", dest.getBalance()));
+                                "Destination balance: $" + String.format("%.2f", dest.getBalance()),
+                        JOptionPane.INFORMATION_MESSAGE);
             } else {
-                JOptionPane.showMessageDialog(frame, "Transfer failed. Check account status and balance.");
+                showStyledMessage("Failed", 
+                        "Transfer failed. Check account status and balance.",
+                        JOptionPane.ERROR_MESSAGE);
             }
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(frame, "Invalid amount.");
+            showStyledMessage("Invalid Input", "Invalid amount.", JOptionPane.ERROR_MESSAGE);
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(frame, "Error: " + ex.getMessage());
+            showStyledMessage("Error", "Error: " + ex.getMessage(), JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -649,7 +672,7 @@ public class BankingSystemGUI {
             java.util.List<Account> frozen = currentTeller.getFrozenAccounts();
 
             if (frozen.isEmpty()) {
-                JOptionPane.showMessageDialog(frame, "No frozen accounts.");
+                showStyledMessage("Frozen Accounts", "No frozen accounts.", JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
 
@@ -659,51 +682,50 @@ public class BankingSystemGUI {
                         acc.getAccountNumber(), acc.getCustomer().getName(), acc.getBalance()));
             }
 
-            JOptionPane.showMessageDialog(frame, sb.toString(), "Frozen Accounts",
-                    JOptionPane.INFORMATION_MESSAGE);
+            showStyledMessage("Frozen Accounts", sb.toString(), JOptionPane.INFORMATION_MESSAGE);
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(frame, "Error viewing frozen accounts: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            showStyledMessage("Error", 
+                    "Error viewing frozen accounts: " + ex.getMessage(),
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void unfreezeAccount() {
         if (!checkTellerSession()) return;
 
-        String id = JOptionPane.showInputDialog(frame, "Enter Account ID to unfreeze:");
+        String id = showStyledInputDialog("Unfreeze Account", "Enter Account ID to unfreeze:");
         if (id == null || id.trim().isEmpty()) return;
 
         try {
             boolean success = currentTeller.unfreezeAccount(id.trim());
             if (success) {
-                JOptionPane.showMessageDialog(frame, "Account unfrozen successfully!");
+                showStyledMessage("Success", "Account unfrozen successfully!", JOptionPane.INFORMATION_MESSAGE);
             } else {
-                JOptionPane.showMessageDialog(frame,
-                        "Failed to unfreeze account. Account may not exist or is not frozen.");
+                showStyledMessage("Failed",
+                        "Failed to unfreeze account. Account may not exist or is not frozen.",
+                        JOptionPane.ERROR_MESSAGE);
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(frame, "Error: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            showStyledMessage("Error", "Error: " + ex.getMessage(), JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void createNewAccount() {
         if (!checkTellerSession()) return;
 
-        String customerId = JOptionPane.showInputDialog(frame, "Existing Customer ID:");
+        String customerId = showStyledInputDialog("Create Account", "Existing Customer ID:");
         if (customerId == null || customerId.trim().isEmpty()) return;
 
         Customer customer = db.getCustomer(customerId.trim());
         if (customer == null) {
-            JOptionPane.showMessageDialog(frame, "Customer not found.");
+            showStyledMessage("Error", "Customer not found.", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        String type = JOptionPane.showInputDialog(frame,
-                "Account Type (card/check/checking/saving):");
+        String type = showStyledInputDialog("Account Type", "Account Type (card/check/checking/saving):");
         if (type == null || type.trim().isEmpty()) return;
 
-        String balanceStr = JOptionPane.showInputDialog(frame, "Initial Balance:");
+        String balanceStr = showStyledInputDialog("Initial Balance", "Initial Balance:");
         if (balanceStr == null || balanceStr.trim().isEmpty()) return;
 
         try {
@@ -717,7 +739,7 @@ public class BankingSystemGUI {
             };
 
             if (acc == null) {
-                JOptionPane.showMessageDialog(frame, "Invalid account type.");
+                showStyledMessage("Error", "Invalid account type.", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -726,28 +748,30 @@ public class BankingSystemGUI {
             customer.addAccount(acc);
             db.updateAccount(acc);
 
-            JOptionPane.showMessageDialog(frame,
-                    "Created account " + newId + " for " + customer.getName());
+            showStyledMessage("Success",
+                    "Created account " + newId + " for " + customer.getName(),
+                    JOptionPane.INFORMATION_MESSAGE);
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(frame, "Invalid balance.");
+            showStyledMessage("Invalid Input", "Invalid balance.", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void createNewCustomer() {
         if (!checkTellerSession()) return;
 
-        String name = JOptionPane.showInputDialog(frame, "Full Name:");
+        String name = showStyledInputDialog("Create Customer", "Full Name:");
         if (name == null || name.trim().isEmpty()) return;
 
-        String password = JOptionPane.showInputDialog(frame, "Password:");
+        String password = showStyledInputDialog("Password", "Password:");
         if (password == null || password.trim().isEmpty()) return;
 
         String newCustomerId = db.generateNextCustomerId();
         Customer newCustomer = new Customer(Integer.parseInt(newCustomerId), name.trim(), password.trim());
         db.addCustomer(newCustomer);
 
-        JOptionPane.showMessageDialog(frame,
-                "Customer Created!\nAssigned Customer ID: " + newCustomerId);
+        showStyledMessage("Success",
+                "Customer Created!\nAssigned Customer ID: " + newCustomerId,
+                JOptionPane.INFORMATION_MESSAGE);
     }
 
     // ==================== CUSTOMER LOGIN ====================
@@ -781,24 +805,81 @@ public class BankingSystemGUI {
     }
 
     private void showCustomerMenu(Account account) {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(Color.WHITE); // White background like login
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(15, 10, 15, 10);
-        gbc.gridx = 0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        // Title - TD Green, Segoe UI
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(Color.WHITE);
+        
+        // Title and account info panel
+        JPanel topPanel = new JPanel();
+        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
+        topPanel.setBackground(Color.WHITE);
+        topPanel.setBorder(BorderFactory.createEmptyBorder(30, 10, 20, 10));
+        
         JLabel title = new JLabel("Customer Menu");
         title.setFont(new Font("Segoe UI", Font.BOLD, 32));
         title.setForeground(new Color(0, 150, 65));
-        title.setHorizontalAlignment(SwingConstants.CENTER);
-        gbc.gridy = 0;
-        gbc.insets = new Insets(30, 10, 30, 10);
-        panel.add(title, gbc);
+        title.setAlignmentX(Component.CENTER_ALIGNMENT);
+        topPanel.add(title);
+        
+        topPanel.add(Box.createVerticalStrut(20));
+        
+        // Account details card
+        JPanel accountCard = new JPanel();
+        accountCard.setLayout(new BoxLayout(accountCard, BoxLayout.Y_AXIS));
+        accountCard.setBackground(new Color(245, 255, 250));
+        accountCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(0, 150, 65, 100), 2, true),
+            BorderFactory.createEmptyBorder(20, 25, 20, 25)
+        ));
+        accountCard.setMaximumSize(new Dimension(500, 150));
+        accountCard.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        // Refresh account data
+        Account freshAccount = db.getAccountByNumber(account.getAccountNumber());
+        if (freshAccount != null) {
+            account = freshAccount;
+        }
+        
+        JLabel accountNumLabel = new JLabel("Account: " + account.getAccountNumber());
+        accountNumLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        accountNumLabel.setForeground(new Color(0, 150, 65));
+        accountNumLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        JLabel typeLabel = new JLabel("Type: " + account.getType());
+        typeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        typeLabel.setForeground(new Color(60, 60, 60));
+        typeLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        JLabel balanceLabel = new JLabel(String.format("Balance: $%.2f", account.getBalance()));
+        balanceLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        balanceLabel.setForeground(new Color(0, 120, 50));
+        balanceLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        JLabel statusLabel = new JLabel("Status: " + account.getStatus());
+        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        Color statusColor = account.getStatus().equals("ACTIVE") ? new Color(0, 150, 65) : new Color(220, 53, 69);
+        statusLabel.setForeground(statusColor);
+        statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        accountCard.add(accountNumLabel);
+        accountCard.add(Box.createVerticalStrut(8));
+        accountCard.add(typeLabel);
+        accountCard.add(Box.createVerticalStrut(10));
+        accountCard.add(balanceLabel);
+        accountCard.add(Box.createVerticalStrut(8));
+        accountCard.add(statusLabel);
+        
+        topPanel.add(accountCard);
+        
+        // Button panel with grid layout
+        JPanel buttonPanel = new JPanel(new GridBagLayout());
+        buttonPanel.setBackground(Color.WHITE);
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 30, 30));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(8, 15, 8, 15);
+        gbc.weightx = 1.0;
 
         String[] options = {
-                "View Account Details",
                 "Deposit",
                 "Withdraw",
                 "Transfer",
@@ -807,36 +888,39 @@ public class BankingSystemGUI {
                 "Logout"
         };
 
-        // Create pill-shaped green buttons
-        gbc.insets = new Insets(8, 10, 8, 10);
+        // Create 2-column grid layout
         for (int i = 0; i < options.length; i++) {
-            JButton btn = createPillButton(options[i], new Color(0, 150, 65));
-            btn.setPreferredSize(new Dimension(300, 50));
-            gbc.gridy = i + 1;
+            // Use red color for Logout button
+            Color btnColor = options[i].equals("Logout") ? new Color(220, 53, 69) : new Color(0, 150, 65);
+            JButton btn = createPillButton(options[i], btnColor);
+            btn.setPreferredSize(new Dimension(250, 50));
+            
+            gbc.gridx = i % 2;
+            gbc.gridy = i / 2;
 
             final int index = i;
+            final Account currentAccount = account;
             btn.addActionListener(e -> {
                 switch (index) {
-                    case 0 -> viewAccountDetails(account);
-                    case 1 -> customerDeposit(account);
-                    case 2 -> customerWithdraw(account);
-                    case 3 -> customerTransfer(account);
-                    case 4 -> viewTransactionHistory(account);
-                    case 5 -> reportStolenCard(account);
-                    case 6 -> {
+                    case 0 -> customerDeposit(currentAccount);
+                    case 1 -> customerWithdraw(currentAccount);
+                    case 2 -> customerTransfer(currentAccount);
+                    case 3 -> viewTransactionHistory(currentAccount);
+                    case 4 -> reportStolenCard(currentAccount);
+                    case 5 -> {
                         currentCustomer = null;
                         showMainMenu();
                     }
                 }
             });
 
-            panel.add(btn, gbc);
+            buttonPanel.add(btn, gbc);
         }
 
-        JScrollPane scrollPane = new JScrollPane(panel);
-        scrollPane.setBorder(null);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        frame.setContentPane(scrollPane);
+        mainPanel.add(topPanel, BorderLayout.NORTH);
+        mainPanel.add(buttonPanel, BorderLayout.CENTER);
+        
+        frame.setContentPane(mainPanel);
         frame.revalidate();
     }
 
@@ -863,10 +947,16 @@ public class BankingSystemGUI {
         btn.setOpaque(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // Hover effect
+        // Hover effect with different colors for green vs red
         btn.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                btn.setBackground(new Color(0, 170, 75));
+                if (color.equals(new Color(220, 53, 69))) {
+                    // Red button hover - darker red
+                    btn.setBackground(new Color(200, 35, 51));
+                } else {
+                    // Green button hover - lighter green
+                    btn.setBackground(new Color(0, 170, 75));
+                }
                 btn.repaint();
             }
             public void mouseExited(java.awt.event.MouseEvent evt) {
@@ -889,8 +979,7 @@ public class BankingSystemGUI {
                 "Account Number: %s\nType: %s\nBalance: $%.2f\nStatus: %s",
                 account.getAccountNumber(), account.getType(),
                 account.getBalance(), account.getStatus());
-        JOptionPane.showMessageDialog(frame, details, "Account Details",
-                JOptionPane.INFORMATION_MESSAGE);
+        showStyledMessage("Account Details", details, JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void customerDeposit(Account account) {
@@ -899,13 +988,13 @@ public class BankingSystemGUI {
         // Check if account is frozen
         Account freshAccount = db.getAccountByNumber(account.getAccountNumber());
         if (freshAccount != null && freshAccount.getStatus().equals("FROZEN")) {
-            JOptionPane.showMessageDialog(frame,
+            showStyledMessage("Account Frozen",
                     "This account is frozen. Please contact a teller.",
-                    "Account Frozen", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        String amountStr = JOptionPane.showInputDialog(frame, "Amount to deposit:");
+        String amountStr = showStyledInputDialog("Deposit", "Amount to deposit:");
         if (amountStr == null || amountStr.trim().isEmpty()) return;
 
         try {
@@ -914,13 +1003,16 @@ public class BankingSystemGUI {
 
             if (success) {
                 db.updateAccount(account);
-                JOptionPane.showMessageDialog(frame,
-                        "Deposit successful!\nNew balance: $" + String.format("%.2f", account.getBalance()));
+                showStyledMessage("Success",
+                        "Deposit successful!\nNew balance: $" + String.format("%.2f", account.getBalance()),
+                        JOptionPane.INFORMATION_MESSAGE);
+                // Refresh the dashboard to show updated balance
+                showCustomerMenu(account);
             } else {
-                JOptionPane.showMessageDialog(frame, "Deposit failed.");
+                showStyledMessage("Failed", "Deposit failed.", JOptionPane.ERROR_MESSAGE);
             }
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(frame, "Invalid amount.");
+            showStyledMessage("Invalid Input", "Please enter a valid amount.", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -930,13 +1022,13 @@ public class BankingSystemGUI {
         // Check if account is frozen
         Account freshAccount = db.getAccountByNumber(account.getAccountNumber());
         if (freshAccount != null && freshAccount.getStatus().equals("FROZEN")) {
-            JOptionPane.showMessageDialog(frame,
+            showStyledMessage("Account Frozen",
                     "This account is frozen. Please contact a teller.",
-                    "Account Frozen", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        String amountStr = JOptionPane.showInputDialog(frame, "Amount to withdraw:");
+        String amountStr = showStyledInputDialog("Withdraw", "Amount to withdraw:");
         if (amountStr == null || amountStr.trim().isEmpty()) return;
 
         try {
@@ -945,13 +1037,16 @@ public class BankingSystemGUI {
 
             if (success) {
                 db.updateAccount(account);
-                JOptionPane.showMessageDialog(frame,
-                        "Withdrawal successful!\nNew balance: $" + String.format("%.2f", account.getBalance()));
+                showStyledMessage("Success",
+                        "Withdrawal successful!\nNew balance: $" + String.format("%.2f", account.getBalance()),
+                        JOptionPane.INFORMATION_MESSAGE);
+                // Refresh the dashboard to show updated balance
+                showCustomerMenu(account);
             } else {
-                JOptionPane.showMessageDialog(frame, "Withdrawal failed. Check balance.");
+                showStyledMessage("Failed", "Withdrawal failed. Check balance.", JOptionPane.ERROR_MESSAGE);
             }
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(frame, "Invalid amount.");
+            showStyledMessage("Invalid Input", "Please enter a valid amount.", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -961,27 +1056,27 @@ public class BankingSystemGUI {
         // Check if source account is frozen
         Account freshSource = db.getAccountByNumber(source.getAccountNumber());
         if (freshSource != null && freshSource.getStatus().equals("FROZEN")) {
-            JOptionPane.showMessageDialog(frame,
+            showStyledMessage("Account Frozen",
                     "This account is frozen. Please contact a teller.",
-                    "Account Frozen", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        String destId = JOptionPane.showInputDialog(frame, "Destination Account ID:");
+        String destId = showStyledInputDialog("Transfer", "Destination Account ID:");
         if (destId == null || destId.trim().isEmpty()) return;
 
         Account dest = db.getAccountByNumber(destId.trim());
         if (dest == null) {
-            JOptionPane.showMessageDialog(frame, "Destination account not found.");
+            showStyledMessage("Error", "Destination account not found.", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         if (dest.getStatus().equals("FROZEN")) {
-            JOptionPane.showMessageDialog(frame, "Destination account is frozen.");
+            showStyledMessage("Error", "Destination account is frozen.", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        String amountStr = JOptionPane.showInputDialog(frame, "Amount to transfer:");
+        String amountStr = showStyledInputDialog("Transfer", "Amount to transfer:");
         if (amountStr == null || amountStr.trim().isEmpty()) return;
 
         try {
@@ -991,14 +1086,16 @@ public class BankingSystemGUI {
             if (success) {
                 db.updateAccount(source);
                 db.updateAccount(dest);
-                JOptionPane.showMessageDialog(frame,
-                        "Transfer successful!\n" +
-                                "Your new balance: $" + String.format("%.2f", source.getBalance()));
+                showStyledMessage("Success",
+                        "Transfer successful!\nYour new balance: $" + String.format("%.2f", source.getBalance()),
+                        JOptionPane.INFORMATION_MESSAGE);
+                // Refresh the dashboard to show updated balance
+                showCustomerMenu(source);
             } else {
-                JOptionPane.showMessageDialog(frame, "Transfer failed. Check balance.");
+                showStyledMessage("Failed", "Transfer failed. Check balance.", JOptionPane.ERROR_MESSAGE);
             }
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(frame, "Invalid amount.");
+            showStyledMessage("Invalid Input", "Please enter a valid amount.", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -1009,7 +1106,7 @@ public class BankingSystemGUI {
                 TransactionsDatabaseManager.getInstance().loadTransactionsForAccount(account.getAccountNumber());
 
         if (transactions.isEmpty()) {
-            JOptionPane.showMessageDialog(frame, "No transactions found.");
+            showStyledMessage("Transaction History", "No transactions found.", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
@@ -1019,8 +1116,7 @@ public class BankingSystemGUI {
                     tx.getTransactionId(), tx.getType(), tx.getAmount(), tx.getStatus()));
         }
 
-        JOptionPane.showMessageDialog(frame, sb.toString(), "Transaction History",
-                JOptionPane.INFORMATION_MESSAGE);
+        showStyledMessage("Transaction History", sb.toString(), JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void reportStolenCard(Account account) {
@@ -1034,39 +1130,49 @@ public class BankingSystemGUI {
         if (confirm == JOptionPane.YES_OPTION) {
             account.freezeAccount();
             db.updateAccount(account);
-            JOptionPane.showMessageDialog(frame,
+            showStyledMessage("Account Frozen",
                     "Your account has been frozen.\nContact a teller to unfreeze it.",
-                    "Account Frozen",
                     JOptionPane.INFORMATION_MESSAGE);
+            // Refresh the dashboard to show updated status
+            showCustomerMenu(account);
         }
     }
 
     // ==================== ADMIN MENU ====================
     private void showAdminMenu() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(Color.WHITE); // White background
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(15, 10, 15, 10);
-        gbc.gridx = 0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        // Title - TD Green, Segoe UI
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(Color.WHITE);
+        
+        // Title panel
+        JPanel titlePanel = new JPanel();
+        titlePanel.setBackground(Color.WHITE);
+        titlePanel.setBorder(BorderFactory.createEmptyBorder(30, 10, 20, 10));
         JLabel title = new JLabel("Admin Menu");
         title.setFont(new Font("Segoe UI", Font.BOLD, 32));
         title.setForeground(new Color(0, 150, 65));
         title.setHorizontalAlignment(SwingConstants.CENTER);
-        gbc.gridy = 0;
-        gbc.insets = new Insets(30, 10, 30, 10);
-        panel.add(title, gbc);
+        titlePanel.add(title);
+        
+        // Button panel with grid layout
+        JPanel buttonPanel = new JPanel(new GridBagLayout());
+        buttonPanel.setBackground(Color.WHITE);
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 30, 30, 30));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(8, 15, 8, 15);
+        gbc.weightx = 1.0;
 
         String[] options = {"View All Tellers", "Add Teller", "Remove Teller", "Logout"};
 
-        // Create pill-shaped green buttons
-        gbc.insets = new Insets(8, 10, 8, 10);
+        // Create 2-column grid layout
         for (int i = 0; i < options.length; i++) {
-            JButton btn = createPillButton(options[i], new Color(0, 150, 65));
-            btn.setPreferredSize(new Dimension(300, 50));
-            gbc.gridy = i + 1;
+            // Use red color for Logout button
+            Color btnColor = options[i].equals("Logout") ? new Color(220, 53, 69) : new Color(0, 150, 65);
+            JButton btn = createPillButton(options[i], btnColor);
+            btn.setPreferredSize(new Dimension(250, 50));
+            
+            gbc.gridx = i % 2;
+            gbc.gridy = i / 2;
 
             final int index = i;
             btn.addActionListener(e -> {
@@ -1078,13 +1184,13 @@ public class BankingSystemGUI {
                 }
             });
 
-            panel.add(btn, gbc);
+            buttonPanel.add(btn, gbc);
         }
 
-        JScrollPane scrollPane = new JScrollPane(panel);
-        scrollPane.setBorder(null);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        frame.setContentPane(scrollPane);
+        mainPanel.add(titlePanel, BorderLayout.NORTH);
+        mainPanel.add(buttonPanel, BorderLayout.CENTER);
+        
+        frame.setContentPane(mainPanel);
         frame.revalidate();
     }
 
@@ -1094,44 +1200,93 @@ public class BankingSystemGUI {
             sb.append(String.format("%s | %s | %s\n",
                     t.getEmployeeId(), t.getName(), t.getEmail()));
         }
-        JOptionPane.showMessageDialog(frame, sb.toString());
+        showStyledMessage("All Tellers", sb.toString(), JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void addTeller() {
-        String id = JOptionPane.showInputDialog(frame, "Employee ID:");
+        String id = showStyledInputDialog("Add Teller", "Employee ID:");
         if (id == null || id.trim().isEmpty()) return;
 
-        String name = JOptionPane.showInputDialog(frame, "Name:");
+        String name = showStyledInputDialog("Name", "Name:");
         if (name == null || name.trim().isEmpty()) return;
 
-        String email = JOptionPane.showInputDialog(frame, "Email:");
+        String email = showStyledInputDialog("Email", "Email:");
         if (email == null || email.trim().isEmpty()) return;
 
-        String password = JOptionPane.showInputDialog(frame, "Password:");
+        String password = showStyledInputDialog("Password", "Password:");
         if (password == null || password.trim().isEmpty()) return;
 
         Teller newTeller = new Teller(id, name, email, password);
         TellerDatabaseManager.getInstance().addTeller(newTeller);
-        JOptionPane.showMessageDialog(frame, "Teller added successfully!");
+        showStyledMessage("Success", "Teller added successfully!", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void removeTeller() {
-        String id = JOptionPane.showInputDialog(frame, "Enter Teller ID to remove:");
+        String id = showStyledInputDialog("Remove Teller", "Enter Teller ID to remove:");
         if (id == null || id.trim().isEmpty()) return;
 
         TellerDatabaseManager tdm = TellerDatabaseManager.getInstance();
         Teller t = tdm.getTeller(id.trim());
 
         if (t == null) {
-            JOptionPane.showMessageDialog(frame, "Teller not found.");
+            showStyledMessage("Error", "Teller not found.", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         tdm.removeTeller(id.trim());
-        JOptionPane.showMessageDialog(frame, "Teller removed successfully!");
+        showStyledMessage("Success", "Teller removed successfully!", JOptionPane.INFORMATION_MESSAGE);
     }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new BankingSystemGUI());
+    }
+
+    // ==================== STYLED INPUT DIALOG ====================
+    private String showStyledInputDialog(String title, String message) {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(5, 0, 15, 0);
+
+        JLabel msgLabel = new JLabel(message);
+        msgLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        msgLabel.setForeground(new Color(60, 60, 60));
+        gbc.gridy = 0;
+        panel.add(msgLabel, gbc);
+
+        JTextField inputField = new JTextField(20);
+        inputField.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        inputField.setPreferredSize(new Dimension(300, 40));
+        inputField.setBorder(BorderFactory.createCompoundBorder(
+                new RoundedBorder(8, new Color(200, 200, 200)),
+                BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        ));
+        gbc.gridy = 1;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        panel.add(inputField, gbc);
+
+        int result = JOptionPane.showConfirmDialog(frame, panel, title,
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+        if (result == JOptionPane.OK_OPTION) {
+            return inputField.getText();
+        }
+        return null;
+    }
+
+    private void showStyledMessage(String title, String message, int messageType) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel msgLabel = new JLabel("<html><div style='width: 300px; text-align: left;'>" + message.replace("\n", "<br>") + "</div></html>");
+        msgLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        msgLabel.setForeground(new Color(60, 60, 60));
+        panel.add(msgLabel, BorderLayout.CENTER);
+
+        JOptionPane.showMessageDialog(frame, panel, title, messageType);
     }
 }
